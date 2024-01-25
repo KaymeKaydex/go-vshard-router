@@ -54,7 +54,7 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 	}
 
 	wg.Wait()
-	if err != nil {
+	if err != nil || resultRs == nil {
 		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
 	}
 	/*
