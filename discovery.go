@@ -105,7 +105,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	}
 
 	t := time.Now()
-	r.log().Debug(ctx, "start discovery all buckets")
+	r.log().Info(ctx, "start discovery all buckets")
 
 	knownBucket := atomic.Int32{}
 
@@ -160,7 +160,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	if err != nil {
 		return nil
 	}
-	r.log().Debug(ctx, fmt.Sprintf("discovery done since: %s", time.Since(t)))
+	r.log().Info(ctx, fmt.Sprintf("discovery done since: %s", time.Since(t)))
 
 	r.knownBucketCount.Store(knownBucket.Load())
 
