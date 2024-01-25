@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -22,7 +23,10 @@ type Router struct {
 
 	idToReplicaset map[uuid.UUID]*Replicaset
 	routeMap       []*Replicaset
-	searchLock     []chan struct{}
+	searchLock     struct {
+		mu        sync.Mutex // запись для per bucket
+		perBucket []chan struct{}
+	}
 
 	knownBucketCount atomic.Int32
 
@@ -128,10 +132,13 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	}
 
 	router := &Router{
-		cfg:              cfg,
-		idToReplicaset:   make(map[uuid.UUID]*Replicaset),
-		routeMap:         make([]*Replicaset, cfg.TotalBucketCount+1),
-		searchLock:       make([]chan struct{}, cfg.TotalBucketCount+1),
+		cfg:            cfg,
+		idToReplicaset: make(map[uuid.UUID]*Replicaset),
+		routeMap:       make([]*Replicaset, cfg.TotalBucketCount+1),
+		searchLock: struct {
+			mu        sync.Mutex
+			perBucket []chan struct{}
+		}{mu: sync.Mutex{}, perBucket: make([]chan struct{}, cfg.TotalBucketCount+1)},
 		knownBucketCount: atomic.Int32{},
 	}
 
