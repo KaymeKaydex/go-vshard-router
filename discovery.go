@@ -3,6 +3,7 @@ package vshard_router
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -36,14 +37,26 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 
 	r.cfg.Logger.Info(ctx, fmt.Sprintf("Discovering bucket %d", bucketID))
 
-	// todo: async and wrap all errors, вычислить при каком количестве нужна парралельность или сразу парралельно
+	wg := sync.WaitGroup{}
+	wg.Add(len(r.idToReplicaset))
+
+	var err error
+	var resultRs *Replicaset
+
 	for rsID, rs := range r.idToReplicaset {
-		_, err := rs.bucketStat(ctx, bucketID)
-		if err == nil {
-			return r.BucketSet(bucketID, rsID)
-		}
+		go func(_rs *Replicaset) {
+			defer wg.Done()
+			_, errStat := _rs.bucketStat(ctx, bucketID)
+			if errStat == nil {
+				resultRs, err = r.BucketSet(bucketID, rsID)
+			}
+		}(rs)
 	}
 
+	wg.Wait()
+	if err != nil {
+		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+	}
 	/*
 	   -- All replicasets were scanned, but a bucket was not
 	   -- found anywhere, so most likely it does not exist. It
@@ -53,7 +66,7 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 	   -- discovery).
 	*/
 
-	return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+	return resultRs, nil
 }
 
 // BucketResolve resolve bucket id to replicaset
