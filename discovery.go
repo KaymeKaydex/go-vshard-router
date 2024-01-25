@@ -18,11 +18,17 @@ import (
 
 // BucketDiscovery search bucket in whole cluster
 func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replicaset, error) {
+	<-r.searchLock[bucketID]
+
 	rs := r.routeMap[bucketID]
 	if rs != nil {
 		return rs, nil
 	}
-	// todo: локать в случае если бакет уже в поиске
+
+	lockCh := make(chan struct{})
+	r.searchLock[bucketID] = lockCh
+	defer close(lockCh)
+
 	r.cfg.Logger.Info(ctx, fmt.Sprintf("Discovering bucket %d", bucketID))
 
 	// todo: async and wrap all errors, вычислить при каком количестве нужна парралельность или сразу парралельно

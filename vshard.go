@@ -20,8 +20,10 @@ var ErrInvalidConfig = fmt.Errorf("config invalid")
 type Router struct {
 	cfg Config
 
-	idToReplicaset   map[uuid.UUID]*Replicaset
-	routeMap         []*Replicaset
+	idToReplicaset map[uuid.UUID]*Replicaset
+	routeMap       []*Replicaset
+	searchLock     []chan struct{}
+
 	knownBucketCount atomic.Int32
 
 	cancelDiscovery func()
@@ -129,6 +131,7 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 		cfg:              cfg,
 		idToReplicaset:   make(map[uuid.UUID]*Replicaset),
 		routeMap:         make([]*Replicaset, cfg.TotalBucketCount+1),
+		searchLock:       make([]chan struct{}, cfg.TotalBucketCount+1),
 		knownBucketCount: atomic.Int32{},
 	}
 
