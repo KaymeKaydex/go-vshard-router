@@ -1,6 +1,6 @@
 module github.com/KaymeKaydex/go-vhsard-router
 
-go 1.21.4
+go 1.20
 
 require (
 	github.com/google/uuid v1.6.0
