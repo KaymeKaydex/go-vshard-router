@@ -98,6 +98,11 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		if since := time.Since(timeStart); since > timeout {
 			r.metrics().RequestDuration(since, false)
 
+			r.log().Debug(ctx, "return result on timeout")
+			if err == nil {
+				err = fmt.Errorf("cant get call cause call impl timeout")
+			}
+
 			return nil, nil, err
 		}
 
@@ -166,6 +171,8 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		}
 
 		r.metrics().RequestDuration(time.Since(timeStart), true)
+
+		r.log().Debug(ctx, fmt.Sprintf("got call result response data %s", resp.Data))
 
 		return resp.Data[1], func(result interface{}) error {
 			var stub interface{}
