@@ -98,7 +98,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		if since := time.Since(timeStart); since > timeout {
 			r.metrics().RequestDuration(since, false)
 
-			r.log().Debug(ctx, "return result on timeout")
+			r.log().Debug(ctx, fmt.Sprintf("return result on timeout; since %s of timeout %s", since, timeout))
 			if err == nil {
 				err = fmt.Errorf("cant get call cause call impl timeout")
 			}
@@ -108,6 +108,8 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		rs, err := r.BucketResolve(ctx, bucketID)
 		if err != nil {
+			r.log().Debug(ctx, fmt.Sprintf("cant resolve bucket %d", bucketID))
+
 			r.metrics().RetryOnCall("bucket_resolve_error")
 			continue
 		}
@@ -122,6 +124,8 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		}
 
 		if len(resp.Data) != 2 {
+			r.log().Error(ctx, fmt.Sprintf("invalid response data lenght; current lenght %d", len(resp.Data)))
+
 			r.metrics().RetryOnCall("resp_data_error")
 
 			err = fmt.Errorf("invalid length of response data: must be = 2, current: %d", len(resp.Data))
@@ -135,7 +139,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			if err != nil {
 				r.metrics().RetryOnCall("internal_error")
 
-				r.log().Error(ctx, fmt.Sprintf("cant decode vhsard err by trarantool with err: %s", err))
+				r.log().Error(ctx, fmt.Sprintf("cant decode vhsard err by trarantool with err: %s; continue try", err))
 				continue
 			}
 
