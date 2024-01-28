@@ -106,7 +106,9 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			return nil, nil, err
 		}
 
-		rs, err := r.BucketResolve(ctx, bucketID)
+		var rs *Replicaset
+
+		rs, err = r.BucketResolve(ctx, bucketID)
 		if err != nil {
 			r.log().Debug(ctx, fmt.Sprintf("cant resolve bucket %d", bucketID))
 
@@ -116,7 +118,9 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		future := rs.conn.Do(req, opts.PoolMode)
 
-		resp, err := future.Get()
+		var resp *tarantool.Response
+
+		resp, err = future.Get()
 		if err != nil {
 			r.metrics().RetryOnCall("future_get_error")
 
@@ -145,6 +149,8 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 			err = vshardErr
 
+			r.log().Error(ctx, fmt.Sprintf("got vshard storage call error: %s", err))
+
 			if vshardErr.Name == "WRONG_BUCKET" ||
 				vshardErr.Name == "BUCKET_IS_LOCKED" ||
 				vshardErr.Name == "TRANSFER_IS_IN_PROGRESS" {
@@ -160,6 +166,8 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		isVShardRespOk := false
 		err = future.GetTyped(&[]interface{}{&isVShardRespOk})
 		if err != nil {
+			r.log().Debug(ctx, fmt.Sprintf("cant get typed with err: %s", err))
+
 			continue
 		}
 
