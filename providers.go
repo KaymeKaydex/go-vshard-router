@@ -72,11 +72,15 @@ func (r *Router) Topology() *TopologyProvider {
 }
 
 func (t *TopologyProvider) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceInfo) error {
-	return t.r.idToReplicaset[rsID].conn.Add(ctx, info.UUID.String(), tarantool.NetDialer{
-		Address:  info.Addr,
-		User:     t.r.cfg.User,
-		Password: t.r.cfg.Password,
-	})
+	instance := pool.Instance{
+		Name: info.UUID.String(),
+		Dialer: tarantool.NetDialer{
+			Address:  info.Addr,
+			User:     t.r.cfg.User,
+			Password: t.r.cfg.Password,
+		},
+	}
+	return t.r.idToReplicaset[rsID].conn.Add(ctx, instance)
 }
 
 func (t *TopologyProvider) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error {
@@ -97,19 +101,24 @@ func (t *TopologyProvider) AddReplicaset(ctx context.Context, rsInfo ReplicasetI
 
 	replicaset.bucketCount.Store(0)
 
-	rsDialers := make(map[string]tarantool.Dialer, len(instances))
+	rsInstances := make([]pool.Instance, len(instances))
 
-	for _, instance := range instances {
+	for i, instance := range instances {
 		dialer := tarantool.NetDialer{
 			Address:  instance.Addr,
 			User:     cfg.User,
 			Password: cfg.Password,
 		}
+		inst := pool.Instance{
+			Name:   instance.UUID.String(),
+			Dialer: dialer,
+			Opts:   router.cfg.PoolOpts,
+		}
 
-		rsDialers[instance.UUID.String()] = dialer
+		rsInstances[i] = inst
 	}
 
-	conn, err := pool.Connect(ctx, rsDialers, router.cfg.PoolOpts)
+	conn, err := pool.Connect(ctx, rsInstances)
 	if err != nil {
 		return err
 	}

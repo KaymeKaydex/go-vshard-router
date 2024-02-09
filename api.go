@@ -118,28 +118,26 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		future := rs.conn.Do(req, opts.PoolMode)
 
-		var resp *tarantool.Response
-
-		resp, err = future.Get()
+		respData, err := future.Get()
 		if err != nil {
 			r.metrics().RetryOnCall("future_get_error")
 
 			continue
 		}
 
-		if len(resp.Data) != 2 {
-			r.log().Error(ctx, fmt.Sprintf("invalid response data lenght; current lenght %d", len(resp.Data)))
+		if len(respData) != 2 {
+			r.log().Error(ctx, fmt.Sprintf("invalid response data lenght; current lenght %d", len(respData)))
 
 			r.metrics().RetryOnCall("resp_data_error")
 
-			err = fmt.Errorf("invalid length of response data: must be = 2, current: %d", len(resp.Data))
+			err = fmt.Errorf("invalid length of response data: must be = 2, current: %d", len(respData))
 			continue
 		}
 
-		if resp.Data[0] == nil {
+		if respData[0] == nil {
 			vshardErr := &StorageCallVShardError{}
 
-			err = mapstructure.Decode(resp.Data[1], vshardErr)
+			err = mapstructure.Decode(respData[1], vshardErr)
 			if err != nil {
 				r.metrics().RetryOnCall("internal_error")
 
@@ -184,9 +182,9 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		r.metrics().RequestDuration(time.Since(timeStart), true)
 
-		r.log().Debug(ctx, fmt.Sprintf("got call result response data %s", resp.Data))
+		r.log().Debug(ctx, fmt.Sprintf("got call result response data %s", respData))
 
-		return resp.Data[1], func(result interface{}) error {
+		return respData[1], func(result interface{}) error {
 			var stub interface{}
 
 			return future.GetTyped(&[]interface{}{&stub, result})

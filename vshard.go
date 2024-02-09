@@ -90,14 +90,14 @@ func (rs *Replicaset) bucketStat(ctx context.Context, bucketID uint64) (BucketSt
 	req = req.Context(ctx)
 
 	future := rs.conn.Do(req, pool.RO)
-	resp, err := future.Get()
+	respData, err := future.Get()
 	if err != nil {
 		return BucketStatInfo{}, err
 	}
 
 	var tmp interface{} // todo: fix non-panic crutch
 
-	if resp.Data[0] == nil {
+	if respData[0] == nil {
 		err := future.GetTyped(&[]interface{}{tmp, bsError})
 		if err != nil {
 			return BucketStatInfo{}, err
@@ -105,7 +105,7 @@ func (rs *Replicaset) bucketStat(ctx context.Context, bucketID uint64) (BucketSt
 	} else {
 		// fucking key-code 1
 		// todo: fix after https://github.com/tarantool/go-tarantool/issues/368
-		err := mapstructure.Decode(resp.Data[0], bsInfo)
+		err := mapstructure.Decode(respData[0], bsInfo)
 		if err != nil {
 			return BucketStatInfo{}, err
 		}
