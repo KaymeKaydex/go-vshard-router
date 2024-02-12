@@ -3,7 +3,6 @@ package vshard_router
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -251,13 +250,6 @@ func validateCfg(cfg Config) error {
 		// check replicaset uuid
 		if rs.UUID == uuid.Nil {
 			return fmt.Errorf("one of replicaset uuid is empty")
-		}
-
-		for _, node := range cfg.Replicasets[rs] {
-			_, err := url.Parse(node.Addr)
-			if err != nil {
-				return err
-			}
 		}
 	}
 
