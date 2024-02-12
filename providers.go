@@ -2,6 +2,7 @@ package vshard_router
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync/atomic"
 	"time"
@@ -121,6 +122,15 @@ func (t *TopologyProvider) AddReplicaset(ctx context.Context, rsInfo ReplicasetI
 	conn, err := pool.Connect(ctx, rsInstances)
 	if err != nil {
 		return err
+	}
+
+	isConnected, err := conn.ConnectedNow(pool.RW)
+	if err != nil {
+		return fmt.Errorf("cant check rs pool conntected rw now with error: %s", err)
+	}
+
+	if !isConnected {
+		return fmt.Errorf("got connected now as false, storage must be configured first")
 	}
 
 	replicaset.conn = conn
