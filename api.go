@@ -116,7 +116,15 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			continue
 		}
 
+		r.log().Info(ctx, fmt.Sprintf("try call replicaset %s", rs.info.Name))
+
 		future := rs.conn.Do(req, opts.PoolMode)
+		if future.Err() != nil {
+			err = future.Err()
+			r.log().Error(ctx, fmt.Sprintf("got future error: %s", err))
+
+			continue
+		}
 
 		respData, err := future.Get()
 		if err != nil {
