@@ -68,3 +68,5 @@ Otherwise, run the following Go command to install the `go-vshard-router` packag
 ```sh
 $ go get -u github.com/KaymeKaydex/go-vhsard-router
 ```
+
+### Running GO Vshard Router
