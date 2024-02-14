@@ -29,21 +29,25 @@ GO --> ROUTER3
 New cluster schema
 ```mermaid
 graph TD
-    subgraph Tarantool Database Cluster
-        subgraph Replicaset 1
-            Master_001_1
-            Replica_001_2
-        end
-
+    subgraph Application Host
+        Golang-Service
     end
 
-ROUTER1["Tarantool vshard-router(As contorol plane)"]
+    Golang-Service --> |iproto| MASTER1
+    Golang-Service --> |iproto| REPLICA1
+    
+    MASTER1["Master 001_1"]
+    REPLICA1["Replica 001_2"]
+    
+    subgraph Tarantool Database Cluster
+        subgraph Replicaset 1
+            MASTER1
+            REPLICA1
+        end
+    end
 
-ROUTER1 --> Master_001_1
-ROUTER1 --> Replica_001_2
-
-GO["Golang service"]
-GO --> Master_001_1
-GO --> Replica_001_2
+    ROUTER1["Tarantool vshard-router(As contorol plane)"]
+    ROUTER1 --> MASTER1
+    ROUTER1 --> REPLICA1
 ```
 # Getting started
