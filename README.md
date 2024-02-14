@@ -51,3 +51,20 @@ graph TD
     ROUTER1 --> REPLICA1
 ```
 # Getting started
+### Prerequisites
+
+- **[Go](https://go.dev/)**: any one of the **three latest major** [releases](https://go.dev/doc/devel/release) (we test it with these).
+
+### Getting Go-Vshard-Router
+With [Go module](https://github.com/golang/go/wiki/Modules) support, simply add the following import
+
+```
+import "github.com/KaymeKaydex/go-vhsard-router"
+```
+to your code, and then `go [build|run|test]` will automatically fetch the necessary dependencies.
+
+Otherwise, run the following Go command to install the `go-vshard-router` package:
+
+```sh
+$ go get -u github.com/KaymeKaydex/go-vhsard-router
+```
