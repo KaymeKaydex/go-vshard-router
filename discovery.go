@@ -199,7 +199,13 @@ func (r *Router) startCronDiscovery(ctx context.Context) error {
 
 		return ctx.Err()
 	case <-time.After(r.cfg.DiscoveryTimeout):
+		r.log().Debug(ctx, "started new cron discovery")
+
 		tStartDiscovery := time.Now()
+
+		defer func() {
+			r.log().Info(ctx, fmt.Sprintf("discovery done since %s", time.Since(tStartDiscovery)))
+		}()
 
 		err := r.DiscoveryAllBuckets(ctx)
 		if err != nil {
