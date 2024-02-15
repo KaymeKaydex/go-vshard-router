@@ -193,29 +193,29 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 
 // startCronDiscovery is discovery_service_f analog with goroutines instead fibers
 func (r *Router) startCronDiscovery(ctx context.Context) error {
-	select {
-	case <-ctx.Done():
-		r.metrics().CronDiscoveryEvent(false, 0, "ctx-cancel")
+	for {
+		select {
+		case <-ctx.Done():
+			r.metrics().CronDiscoveryEvent(false, 0, "ctx-cancel")
 
-		return ctx.Err()
-	case <-time.After(r.cfg.DiscoveryTimeout):
-		r.log().Debug(ctx, "started new cron discovery")
+			return ctx.Err()
+		case <-time.After(r.cfg.DiscoveryTimeout):
+			r.log().Debug(ctx, "started new cron discovery")
 
-		tStartDiscovery := time.Now()
+			tStartDiscovery := time.Now()
 
-		defer func() {
-			r.log().Info(ctx, fmt.Sprintf("discovery done since %s", time.Since(tStartDiscovery)))
-		}()
+			defer func() {
+				r.log().Info(ctx, fmt.Sprintf("discovery done since %s", time.Since(tStartDiscovery)))
+			}()
 
-		err := r.DiscoveryAllBuckets(ctx)
-		if err != nil {
-			r.metrics().CronDiscoveryEvent(false, time.Since(tStartDiscovery), "discovery-error")
+			err := r.DiscoveryAllBuckets(ctx)
+			if err != nil {
+				r.metrics().CronDiscoveryEvent(false, time.Since(tStartDiscovery), "discovery-error")
 
-			r.log().Error(ctx, fmt.Sprintf("cant do cron discovery with error: %s", err))
+				r.log().Error(ctx, fmt.Sprintf("cant do cron discovery with error: %s", err))
+			}
+
+			r.metrics().CronDiscoveryEvent(true, time.Since(tStartDiscovery), "ok")
 		}
-
-		r.metrics().CronDiscoveryEvent(true, time.Since(tStartDiscovery), "ok")
 	}
-
-	return nil
 }
