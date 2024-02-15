@@ -165,5 +165,6 @@ func main() {
 	}
 
 	fmt.Printf("interface result: %v", interfaceResult)
+	fmt.Printf("get typed result: %v", info)
 }
 ```
