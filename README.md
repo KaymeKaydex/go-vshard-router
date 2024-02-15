@@ -77,31 +77,69 @@ First you need to import Go-Vshard-Router package for using Go-Vshard-Router
 package main
 
 import (
-  "strconv"
-  "context"
-  "time"
+	"context"
+	"fmt"
+	"strconv"
+	"time"
 
-  vshardrouter "github.com/KaymeKaydex/go-vhsard-router"
+	vshardrouter "github.com/KaymeKaydex/go-vhsard-router"
+	"github.com/google/uuid"
+	"github.com/tarantool/go-tarantool/v2"
+	"github.com/tarantool/go-tarantool/v2/pool"
 )
 
 func main() {
 	ctx := context.Background()
+
 	directRouter, err := vshardrouter.NewRouter(ctx, vshardrouter.Config{
 		DiscoveryTimeout: time.Minute,
 		DiscoveryMode:    vshardrouter.DiscoveryModeOn,
-		Replicasets:      cfg.Storage.Topology,
+		Replicasets: map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
+			vshardrouter.ReplicasetInfo{
+				Name: "replcaset_1",
+				UUID: uuid.New(),
+			}: {
+				{
+					Addr: "127.0.0.1:1001",
+					UUID: uuid.New(),
+				},
+				{
+					Addr: "127.0.0.1:1002",
+					UUID: uuid.New(),
+				},
+			},
+			vshardrouter.ReplicasetInfo{
+				Name: "replcaset_2",
+				UUID: uuid.New(),
+			}: {
+				{
+					Addr: "127.0.0.1:2001",
+					UUID: uuid.New(),
+				},
+				{
+					Addr: "127.0.0.1:2002",
+					UUID: uuid.New(),
+				},
+			},
+		},
 		TotalBucketCount: 128000,
 		PoolOpts: tarantool.Opts{
-			Timeout: time.Second, 
+			Timeout: time.Second,
 		},
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	bucketID := vshardrouter.BucketIDStrCRC32(strconv.FormatUint(req.UID, 10), c.directRouter.RouterBucketCount())
+	user := struct {
+		ID uint64
+	}{
+		ID: 123,
+	}
 
-	interfaceResult, typedFnc, err := directRouter.RouterCallImpl(
+	bucketID := vshardrouter.BucketIDStrCRC32(strconv.FormatUint(user.ID, 10), directRouter.RouterBucketCount())
+
+	interfaceResult, getTyped, err := directRouter.RouterCallImpl(
 		ctx,
 		bucketID,
 		vshardrouter.CallOpts{VshardMode: vshardrouter.ReadMode, PoolMode: pool.PreferRO, Timeout: time.Second * 2},
@@ -116,5 +154,16 @@ func main() {
 			},
 		}},
 	)
+
+	info := &struct {
+		BirthDay int
+	}{}
+
+	err = getTyped(&[]interface{}{info})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("interface result: %v", interfaceResult)
 }
 ```
