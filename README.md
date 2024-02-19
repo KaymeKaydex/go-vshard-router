@@ -1,4 +1,7 @@
 # Go VShard Router
+Translations:
+- [Русский](https://github.com/KaymeKaydex/go-vhsard-router/blob/main/README_ru.md)
+
 
 go-vshard-router is a library for sending requests to a sharded tarantool cluster directly,
 without using tarantool-router. go-vshard-router takes a new approach to creating your cluster
@@ -53,7 +56,7 @@ graph TD
 # Getting started
 ### Prerequisites
 
-- **[Go](https://go.dev/)**: any one of the **three latest major** [releases](https://go.dev/doc/devel/release) (we test it with these).
+- **[Go](https://go.dev/)**: any one of the **two latest major** [releases](https://go.dev/doc/devel/release) (we test it with these).
 
 ### Getting Go-Vshard-Router
 With [Go module](https://github.com/golang/go/wiki/Modules) support, simply add the following import
@@ -168,3 +171,5 @@ func main() {
 	fmt.Printf("get typed result: %v", info)
 }
 ```
+
+## Benchmarks
