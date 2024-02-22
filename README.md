@@ -1,6 +1,6 @@
 # Go VShard Router
 Translations:
-- [Русский](https://github.com/KaymeKaydex/go-vhsard-router/blob/main/README_ru.md)
+- [Русский](https://github.com/KaymeKaydex/go-vshard-router/blob/main/README_ru.md)
 
 
 go-vshard-router is a library for sending requests to a sharded tarantool cluster directly,
@@ -62,14 +62,14 @@ graph TD
 With [Go module](https://github.com/golang/go/wiki/Modules) support, simply add the following import
 
 ```
-import "github.com/KaymeKaydex/go-vhsard-router"
+import "github.com/KaymeKaydex/go-vshard-router"
 ```
 to your code, and then `go [build|run|test]` will automatically fetch the necessary dependencies.
 
 Otherwise, run the following Go command to install the `go-vshard-router` package:
 
 ```sh
-$ go get -u github.com/KaymeKaydex/go-vhsard-router
+$ go get -u github.com/KaymeKaydex/go-vshard-router
 ```
 
 ### Running Go-Vshard-Router
@@ -85,7 +85,7 @@ import (
 	"strconv"
 	"time"
 
-	vshardrouter "github.com/KaymeKaydex/go-vhsard-router"
+	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
 	"github.com/google/uuid"
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
