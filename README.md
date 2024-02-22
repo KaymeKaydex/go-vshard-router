@@ -176,28 +176,17 @@ func main() {
 
 ### [K6](https://github.com/grafana/k6)
 
-bench hardware configuration: 
-- todo
-
 constant VUes scenario:
-
 - go-vshard-router:
 ```
-
-
         /\      |‾‾| /‾‾/   /‾‾/
    /\  /  \     |  |/  /   /  /
   /  \/    \    |     (   /   ‾‾\
  /          \   |  |\  \ |  (‾)  |
 / __________ \  |__| \__\ \_____/ .io
 
-     execution: local
-        script: k6_top.js
-        output: -
-
      scenarios: (100.00%) 1 scenario, 500 max VUs, 1m0s max duration (incl. graceful stop):
               * demo: 500 looping VUs for 30s (gracefulStop: 30s)
-
 
      ✓ status was 200
 
@@ -222,7 +211,6 @@ vus_max........................: 500     min=500         max=500
 
 running (0m30.0s), 000/500 VUs, 5156515 complete and 0 interrupted iterations
 demo ✓ [======================================] 500 VUs  30s
-
 ```
 
 - tarantool-router
