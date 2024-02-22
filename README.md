@@ -174,7 +174,7 @@ func main() {
 
 ## Benchmarks
 
-### K6
+### [K6](https://github.com/grafana/k6)
 
 bench hardware configuration: 
 - todo
