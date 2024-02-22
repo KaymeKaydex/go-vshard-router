@@ -201,11 +201,11 @@ constant VUes scenario:
 
      ✓ status was 200
 
-     checks.........................: 100.00% ✓ 5156515       ✗ 0
-     data_received..................: 387 MB  13 MB/s
-     data_sent......................: 1.2 GB  41 MB/s
-     http_req_blocked...............: avg=4.2µs   min=623ns    med=1.94µs  max=44.89ms p(90)=3.55µs  p(95)=4.77µs
-     http_req_connecting............: avg=527ns   min=0s       med=0s      max=26.83ms p(90)=0s      p(95)=0s
+checks.........................: 100.00% ✓ 5156515       ✗ 0
+data_received..................: 387 MB  13 MB/s
+data_sent......................: 1.2 GB  41 MB/s
+http_req_blocked...............: avg=4.2µs   min=623ns    med=1.94µs  max=44.89ms p(90)=3.55µs  p(95)=4.77µs
+http_req_connecting............: avg=527ns   min=0s       med=0s      max=26.83ms p(90)=0s      p(95)=0s
 ✓ http_req_duration..............: avg=2.22ms  min=158.08µs med=1.45ms  max=65.18ms p(90)=4.86ms  p(95)=6.7ms
 { expected_response:true }...: avg=2.22ms  min=158.08µs med=1.45ms  max=65.18ms p(90)=4.86ms  p(95)=6.7ms
 http_req_failed................: 0.00%   ✓ 0             ✗ 5156515
