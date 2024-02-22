@@ -1,0 +1,35 @@
+listener:
+  address: :8090
+routers:
+  addrs:
+    - "127.0.0.1:12002"
+storage:
+  direct: true
+  total_bucket_count: 128000
+  topology:
+    clusters:
+      storage_1:
+        replicaset_uuid: cbf06940-0790-498b-948d-042b62cf3d29
+      storage_2:
+        replicaset_uuid: ac522f65-aa94-4134-9f64-51ee384f1a54
+    instances:
+      storage_1_a:
+        cluster: storage_1
+        box:
+          listen: '127.0.0.1:3301'
+          instance_uuid: '6E35AC64-1241-0001-0001-000000000000'
+      storage_1_b:
+        cluster: storage_1
+        box:
+          listen: '127.0.0.1:3302'
+          instance_uuid: '6E35AC64-1241-0001-0002-000000000000'
+      storage_2_a:
+        cluster: storage_2
+        box:
+          listen: '127.0.0.1:3303'
+          instance_uuid: '6E35AC64-1241-0002-0001-000000000000'
+      storage_2_b:
+        cluster: storage_2
+        box:
+          listen: '127.0.0.1:3304'
+          instance_uuid: '6E35AC64-1241-0002-0002-000000000000'
