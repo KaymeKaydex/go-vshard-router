@@ -1,6 +1,6 @@
 # Go VShard Router
 Translations:
-- [English](https://github.com/KaymeKaydex/go-vhsard-router/blob/main/README.md)
+- [English](https://github.com/KaymeKaydex/go-vshard-router/blob/main/README.md)
 
 go-vshard-router — библиотека для отправки запросов напрямую в стораджа в шардированный кластер tarantool,
 без использования tarantool-router. go-vshard-router применяет новый подход к созданию кластера
@@ -62,14 +62,14 @@ graph TD
 С помощью [Go module](https://github.com/golang/go/wiki/Modules) можно добавить следующий импорт
 
 ```
-import "github.com/KaymeKaydex/go-vhsard-router"
+import "github.com/KaymeKaydex/go-vshard-router"
 ```
 в ваш код, а затем `go [build|run|test]` автоматически получит необходимые зависимости.
 
 
 В противном случае выполните следующую команду Go, чтобы установить пакет go-vshard-router:
 ```sh
-$ go get -u github.com/KaymeKaydex/go-vhsard-router
+$ go get -u github.com/KaymeKaydex/go-vshard-router
 ```
 
 ### Использование Go-Vshard-Router
@@ -85,7 +85,7 @@ import (
 	"strconv"
 	"time"
 
-	vshardrouter "github.com/KaymeKaydex/go-vhsard-router"
+	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
 	"github.com/google/uuid"
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
