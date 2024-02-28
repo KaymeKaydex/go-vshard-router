@@ -56,3 +56,9 @@ func TestRouterBucketIDStrCRC32(t *testing.T) {
 	require.Equal(t, uint64(103202), BucketIDStrCRC32("2707623829", uint64(256000)))
 	require.Equal(t, uint64(35415), BucketIDStrCRC32("2706201716", uint64(256000)))
 }
+
+func BenchmarkRouterBucketIDStrCRC32(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		BucketIDStrCRC32("test_bench_key", uint64(256000))
+	}
+}
