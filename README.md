@@ -1,4 +1,7 @@
 # Go VShard Router
+
+<img align="right" width="159px" src="docs/logo.png">
+
 Translations:
 - [Русский](https://github.com/KaymeKaydex/go-vhsard-router/blob/main/README_ru.md)
 
@@ -173,44 +176,16 @@ func main() {
 ```
 
 ## Benchmarks
-
+Topology: 
+- 4 replicasets (x2 instances per rs)
+- 4 tarantool proxy
+- 1 golang service
 ### [K6](https://github.com/grafana/k6)
 
 constant VUes scenario:
+```select```
 - go-vshard-router:
-```
-        /\      |‾‾| /‾‾/   /‾‾/
-   /\  /  \     |  |/  /   /  /
-  /  \/    \    |     (   /   ‾‾\
- /          \   |  |\  \ |  (‾)  |
-/ __________ \  |__| \__\ \_____/ .io
-
-     scenarios: (100.00%) 1 scenario, 500 max VUs, 1m0s max duration (incl. graceful stop):
-              * demo: 500 looping VUs for 30s (gracefulStop: 30s)
-
-     ✓ status was 200
-
-checks.........................: 100.00% ✓ 5156515       ✗ 0
-data_received..................: 387 MB  13 MB/s
-data_sent......................: 1.2 GB  41 MB/s
-http_req_blocked...............: avg=4.2µs   min=623ns    med=1.94µs  max=44.89ms p(90)=3.55µs  p(95)=4.77µs
-http_req_connecting............: avg=527ns   min=0s       med=0s      max=26.83ms p(90)=0s      p(95)=0s
-✓ http_req_duration..............: avg=2.22ms  min=158.08µs med=1.45ms  max=65.18ms p(90)=4.86ms  p(95)=6.7ms
-{ expected_response:true }...: avg=2.22ms  min=158.08µs med=1.45ms  max=65.18ms p(90)=4.86ms  p(95)=6.7ms
-http_req_failed................: 0.00%   ✓ 0             ✗ 5156515
-http_req_receiving.............: avg=47.23µs min=3.69µs   med=13.79µs max=40.63ms p(90)=23.41µs p(95)=36.92µs
-http_req_sending...............: avg=31.53µs min=4.38µs   med=11.55µs max=46.62ms p(90)=21.1µs  p(95)=28.63µs
-http_req_tls_handshaking.......: avg=0s      min=0s       med=0s      max=0s      p(90)=0s      p(95)=0s
-http_req_waiting...............: avg=2.14ms  min=143.95µs med=1.4ms   max=40.34ms p(90)=4.72ms  p(95)=6.48ms
-http_reqs......................: 5156515 171855.672553/s
-iteration_duration.............: avg=2.77ms  min=214.26µs med=1.9ms   max=76.55ms p(90)=5.64ms  p(95)=7.74ms
-iterations.....................: 5156515 171855.672553/s
-vus............................: 500     min=500         max=500
-vus_max........................: 500     min=500         max=500
-
-
-running (0m30.0s), 000/500 VUs, 5156515 complete and 0 interrupted iterations
-demo ✓ [======================================] 500 VUs  30s
-```
+  ![Image alt](docs/direct.png)
 
 - tarantool-router
+  ![Image alt](docs/not-direct.png)
