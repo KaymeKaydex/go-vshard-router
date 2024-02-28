@@ -183,9 +183,10 @@ Topology:
 ### [K6](https://github.com/grafana/k6)
 
 constant VUes scenario:
-```select```
-- go-vshard-router:
-  ![Image alt](docs/direct.png)
+at a load close to production
 
-- tarantool-router
+```select```
+- go-vshard-router: uncritically worse latency, but 3 times more rps
+  ![Image alt](docs/direct.png)
+- tarantool-router: (80% cpu, heavy rps kills proxy at 100% cpu) 
   ![Image alt](docs/not-direct.png)
