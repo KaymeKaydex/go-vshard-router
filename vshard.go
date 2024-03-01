@@ -28,6 +28,7 @@ type Router struct {
 	}
 
 	knownBucketCount atomic.Int32
+	refID            atomic.Int64
 
 	cancelDiscovery func()
 }
