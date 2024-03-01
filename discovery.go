@@ -174,6 +174,11 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 					knownBucket.Add(1)
 				}
 
+				// if TotalBucketCount < BUCKET_CHUNK_SIZE then nextFrom equal zero
+				if rawReq.From == *nextFrom {
+					return nil
+				}
+
 				rawReq.From = *nextFrom
 			}
 		})

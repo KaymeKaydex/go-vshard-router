@@ -113,6 +113,68 @@ func (rs *Replicaset) bucketStat(ctx context.Context, bucketID uint64) (BucketSt
 	return *bsInfo, bsError
 }
 
+type ReplicasetCallOpts struct {
+	PoolMode pool.Mode
+	Timeout  time.Duration
+}
+
+func (rs *Replicaset) ReplicasetCallImpl(
+	ctx context.Context,
+	opts ReplicasetCallOpts,
+	fnc string,
+	args interface{},
+) (interface{}, StorageResultTypedFunc, error) {
+	if opts.Timeout == 0 {
+		opts.Timeout = CallTimeoutMin
+	}
+
+	timeout := opts.Timeout
+	timeStart := time.Now()
+
+	req := tarantool.NewCallRequest(fnc)
+	req = req.Context(ctx)
+	req = req.Args(args)
+
+	var (
+		respData []interface{}
+		err      error
+	)
+
+	for {
+		if since := time.Since(timeStart); since > timeout {
+			return nil, nil, err
+		}
+
+		future := rs.conn.Do(req, opts.PoolMode)
+
+		respData, err = future.Get()
+		if err != nil {
+			continue
+		}
+
+		if len(respData) != 2 {
+			err = fmt.Errorf("invalid length of response data: must be = 2, current: %d", len(respData))
+			continue
+		}
+
+		if respData[1] != nil {
+			assertErr := &StorageCallAssertError{}
+
+			err = mapstructure.Decode(respData[1], assertErr)
+			if err != nil {
+				continue
+			}
+
+			err = assertErr
+			continue
+		}
+
+		return respData[0], func(result interface{}) error {
+			return future.GetTyped(&[]interface{}{&result})
+		}, nil
+	}
+}
+
 type InstanceInfo struct {
 	Addr string
 	UUID uuid.UUID
