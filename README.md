@@ -9,9 +9,6 @@ Translations:
 go-vshard-router is a library for sending requests to a sharded tarantool cluster directly,
 without using tarantool-router. go-vshard-router takes a new approach to creating your cluster
 
-
-
-
 Old cluster schema
 ```mermaid
 graph TD
