@@ -1,3 +1,7 @@
+# IDE files
 .idea
+.vscode
+
+# Tarantool out files
 .rocks
 /examples/customer/tarantool/data
