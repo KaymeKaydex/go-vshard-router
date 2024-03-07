@@ -1,5 +1,5 @@
 listener:
-  address: :8090
+  address: :8096
 routers:
   addrs:
     - "127.0.0.1:12002"

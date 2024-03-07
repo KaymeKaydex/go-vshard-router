@@ -128,6 +128,8 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		respData, err := future.Get()
 		if err != nil {
+			r.log().Error(ctx, fmt.Sprintf("got error when trying to get future: %s", err))
+
 			r.metrics().RetryOnCall("future_get_error")
 
 			continue

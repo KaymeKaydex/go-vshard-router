@@ -30,6 +30,10 @@ replicasets = {'cbf06940-0790-498b-948d-042b62cf3d29',
 vshard = require('vshard')
 vshard.storage.cfg(cfg, names[NAME])
 
+box.once('access:v1', function()
+    box.schema.user.grant('guest', 'read,write,execute', 'universe')
+end)
+
 box.once("testapp:schema:1", function()
     local customer = box.schema.space.create('customer')
     customer:format({
@@ -67,10 +71,8 @@ box.once("testapp:schema:1", function()
     box.schema.role.grant('public', 'execute', 'function', 'raise_client_error')
 end)
 
-function customer_add(customer)
-    box.begin()
-    box.space.customer:insert({customer.customer_id, customer.bucket_id,
-                               customer.name})
+function insert_customer(customer)
+    box.space.customer:insert({customer.customer_id, customer.bucket_id, customer.name})
     for _, account in ipairs(customer.accounts) do
         box.space.account:insert({
             account.account_id,
@@ -80,8 +82,12 @@ function customer_add(customer)
             account.name
         })
     end
-    box.commit()
-    return true
+end
+
+function customer_add(customer)
+    local ares = box.atomic(insert_customer, customer)
+
+    return {res = ares }
 end
 
 function customer_lookup(customer_id)
