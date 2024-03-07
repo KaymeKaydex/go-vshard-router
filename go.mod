@@ -1,4 +1,4 @@
-module github.com/KaymeKaydex/go-vhsard-router
+module github.com/KaymeKaydex/go-vshard-router
 
 go 1.20
 
