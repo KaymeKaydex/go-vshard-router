@@ -28,8 +28,14 @@ type Router struct {
 	}
 
 	knownBucketCount atomic.Int32
-	refID            atomic.Int64
-	nWorkers         int32
+
+	// ----------------------- Map-Reduce -----------------------
+	// Storage Ref ID. It must be unique for each ref request
+	// and therefore is global and monotonically growing.
+	refID atomic.Int64
+
+	// worker's count to proceed channel of replicaset's futures
+	nWorkers int32
 
 	cancelDiscovery func()
 }
