@@ -3,10 +3,12 @@ package vshard_router
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
@@ -96,7 +98,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 	for {
 
 		if since := time.Since(timeStart); since > timeout {
-			r.metrics().RequestDuration(since, false)
+			r.metrics().RequestDuration(since, false, false)
 
 			r.log().Debug(ctx, fmt.Sprintf("return result on timeout; since %s of timeout %s", since, timeout))
 			if err == nil {
@@ -188,7 +190,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			err = errorResp
 		}
 
-		r.metrics().RequestDuration(time.Since(timeStart), true)
+		r.metrics().RequestDuration(time.Since(timeStart), true, false)
 
 		r.log().Debug(ctx, fmt.Sprintf("got call result response data %s", respData))
 
@@ -200,18 +202,22 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 	}
 }
 
-func (r *Router) callStorageUnref(futures map[uuid.UUID]*tarantool.Future, refID int64) {
+// call function "storage_unref" if map_callrw is failed or successed
+func (r *Router) callStorageUnref(refID int64) {
 	req := tarantool.NewCallRequest("vshard.storage._call")
 	req = req.Args([]interface{}{"storage_unref", refID})
 
-	for id, future := range futures {
-		future.SetError(nil)
+	for _, replicaset := range r.idToReplicaset {
+		conn := replicaset.conn
 
-		conn := r.idToReplicaset[id].conn
-
-		future = conn.Do(req, pool.RW)
+		future := conn.Do(req, pool.RW)
 		future.SetError(nil)
 	}
+}
+
+type replicasetFuture struct {
+	id     uuid.UUID
+	future *tarantool.Future
 }
 
 // RouterMapCallRWImpl perform call function on all masters in the cluster
@@ -233,9 +239,9 @@ func (r *Router) RouterMapCallRWImpl(
 	refID := r.refID.Load()
 	r.refID.Add(1)
 
-	futures := make(map[uuid.UUID]*tarantool.Future, 0)
+	defer r.callStorageUnref(refID)
 
-	defer r.callStorageUnref(futures, refID)
+	mapCallCtx, cancel := context.WithTimeout(ctx, timeout)
 
 	req := tarantool.NewCallRequest("vshard.storage._call")
 	req = req.Context(ctx)
@@ -248,106 +254,192 @@ func (r *Router) RouterMapCallRWImpl(
 		timeout,
 	})
 
-	for id, replicaset := range r.idToReplicaset {
-		conn := replicaset.conn
+	g, gctx := errgroup.WithContext(mapCallCtx)
+	rsFutures := make(chan replicasetFuture)
 
-		future := conn.Do(req, pool.RW)
-		futures[id] = future
-	}
+	g.Go(func() error {
+		defer close(rsFutures)
+
+		for id, replicaset := range r.idToReplicaset {
+			conn := replicaset.conn
+
+			future := conn.Do(req, pool.RW)
+			if err := future.Err(); err != nil {
+				cancel()
+
+				return fmt.Errorf("rs {%s} storage_ref err: %s", id.String(), err.Error())
+			}
+
+			select {
+			case <-gctx.Done():
+				return gctx.Err()
+			case rsFutures <- replicasetFuture{
+				id:     id,
+				future: future,
+			}:
+			}
+		}
+
+		return nil
+	})
 
 	// ref stage collect
 
-	totalBucketCount := uint16(0)
+	totalBucketCount := int32(0)
 
-	for _, future := range futures {
-		respData, err := future.Get()
-		if err != nil {
-			return nil, err
-		}
+	for i := 0; i < int(r.nWorkers); i++ {
+		g.Go(func() error {
+			for rsFuture := range rsFutures {
+				future := rsFuture.future
 
-		if respData[0] == nil {
-			vshardErr := &StorageCallAssertError{}
+				respData, err := future.Get()
+				if err != nil {
+					cancel()
 
-			err = mapstructure.Decode(respData[1], vshardErr)
-			if err != nil {
-				return nil, err
+					return err
+				}
+
+				if respData[0] == nil {
+					vshardErr := &StorageCallAssertError{}
+
+					err = mapstructure.Decode(respData[1], vshardErr)
+					if err != nil {
+						cancel()
+
+						return err
+					}
+
+					cancel()
+
+					return vshardErr
+				}
+
+				var bucketCount uint16
+				err = future.GetTyped(&[]interface{}{&bucketCount})
+				if err != nil {
+					cancel()
+
+					return err
+				}
+
+				atomic.AddInt32(&totalBucketCount, int32(bucketCount))
 			}
 
-			return nil, vshardErr
-		}
-
-		var bucketCount uint16
-		err = future.GetTyped(&[]interface{}{&bucketCount})
-		if err != nil {
-			return nil, err
-		}
-
-		totalBucketCount += bucketCount
+			return nil
+		})
 	}
 
-	if int32(totalBucketCount) != r.knownBucketCount.Load() {
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	if totalBucketCount != r.knownBucketCount.Load() {
 		return nil, fmt.Errorf("unknown bucket counts %d", totalBucketCount)
 	}
 
 	// map stage: send
 
+	g, gctx = errgroup.WithContext(mapCallCtx)
+	rsFutures = make(chan replicasetFuture)
 	req = req.Args([]interface{}{"storage_map", refID, fnc, args})
 
-	for id, replicaset := range r.idToReplicaset {
-		conn := replicaset.conn
+	g.Go(func() error {
+		defer close(rsFutures)
 
-		future := conn.Do(req, pool.RW)
-		futures[id] = future
-	}
+		for id, replicaset := range r.idToReplicaset {
+			conn := replicaset.conn
+
+			future := conn.Do(req, pool.RW)
+			if err := future.Err(); err != nil {
+				cancel()
+
+				return fmt.Errorf("rs {%s} storage_map err: %s", id.String(), err.Error())
+			}
+
+			select {
+			case <-gctx.Done():
+				return gctx.Err()
+			case rsFutures <- replicasetFuture{
+				id:     id,
+				future: future,
+			}:
+			}
+		}
+
+		return nil
+	})
 
 	// map stage: collect
 
 	idToResult := make(map[uuid.UUID]interface{})
 
-	for id, future := range futures {
-		respData, err := future.Get()
-		if err != nil {
-			return nil, err
-		}
+	for i := 0; i < int(r.nWorkers); i++ {
+		g.Go(func() error {
+			for rsFuture := range rsFutures {
+				future := rsFuture.future
 
-		if len(respData) != 2 {
-			err = fmt.Errorf("invalid length of response data: must be = 2, current: %d", len(respData))
+				respData, err := future.Get()
+				if err != nil {
+					cancel()
 
-			return nil, err
-		}
+					return err
+				}
 
-		if respData[0] == nil {
-			vshardErr := &StorageCallAssertError{}
+				if len(respData) != 2 {
+					err = fmt.Errorf("invalid length of response data: must be = 2, current: %d", len(respData))
+					cancel()
 
-			err = mapstructure.Decode(respData[1], vshardErr)
-			if err != nil {
-				return nil, err
+					return err
+				}
+
+				if respData[0] == nil {
+					vshardErr := &StorageCallAssertError{}
+
+					err = mapstructure.Decode(respData[1], vshardErr)
+					if err != nil {
+						cancel()
+
+						return err
+					}
+
+					cancel()
+
+					return vshardErr
+				}
+
+				isVShardRespOk := false
+				err = future.GetTyped(&[]interface{}{&isVShardRespOk})
+				if err != nil {
+					cancel()
+
+					return err
+				}
+
+				if !isVShardRespOk { // error
+					errorResp := &StorageCallAssertError{}
+
+					err = future.GetTyped(&[]interface{}{&isVShardRespOk, errorResp})
+					if err != nil {
+						err = fmt.Errorf("cant get typed vshard err with err: %s", err)
+					}
+
+					cancel()
+
+					return err
+				}
+
+				idToResult[rsFuture.id] = respData[1]
 			}
 
-			return nil, vshardErr
-		}
-
-		isVShardRespOk := false
-		err = future.GetTyped(&[]interface{}{&isVShardRespOk})
-		if err != nil {
-			return nil, err
-		}
-
-		if !isVShardRespOk { // error
-			errorResp := &StorageCallAssertError{}
-
-			err = future.GetTyped(&[]interface{}{&isVShardRespOk, errorResp})
-			if err != nil {
-				err = fmt.Errorf("cant get typed vshard err with err: %s", err)
-			}
-
-			return nil, err
-		}
-
-		idToResult[id] = respData[1]
+			return nil
+		})
 	}
 
-	r.metrics().RequestDuration(time.Since(timeStart), true)
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	r.metrics().RequestDuration(time.Since(timeStart), true, true)
 
 	return idToResult, nil
 }
