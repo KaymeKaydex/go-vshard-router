@@ -31,7 +31,7 @@ type ReplicasetCallOpts struct {
 
 // ReplicasetCallImpl perform function on remote storage
 // link https://github.com/tarantool/vshard/blob/master/vshard/replicaset.lua#L661
-func (rs *Replicaset) ReplicasetCallImpl(
+func (rs *Replicaset) ReplicaCall(
 	ctx context.Context,
 	opts ReplicasetCallOpts,
 	fnc string,
