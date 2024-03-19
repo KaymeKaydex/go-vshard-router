@@ -63,18 +63,6 @@ type Config struct {
 	PoolOpts         tarantool.Opts
 }
 
-type ReplicasetInfo struct {
-	Name string
-	UUID uuid.UUID
-}
-
-type Replicaset struct {
-	conn *pool.ConnectionPool
-	info ReplicasetInfo
-
-	bucketCount atomic.Int32
-}
-
 type BucketStatInfo struct {
 	BucketID uint64 `mapstructure:"id"`
 	Status   string `mapstructure:"status"`
