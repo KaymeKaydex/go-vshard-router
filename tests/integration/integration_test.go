@@ -2,11 +2,12 @@ package integration
 
 import (
 	"context"
-	"github.com/KaymeKaydex/go-vshard-router"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	vshard_router "github.com/KaymeKaydex/go-vshard-router"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ func TestReplicasetCall(t *testing.T) {
 	var isReady bool
 
 	for _, rs := range router.RouterRouteAll() {
-		_, getTypedResp, err := rs.ReplicasetCallImpl(
+		_, getTypedResp, err := rs.ReplicaCall(
 			ctx,
 			vshard_router.ReplicasetCallOpts{
 				PoolMode: pool.RW,
@@ -75,7 +76,7 @@ func TestReplicasetCall(t *testing.T) {
 	)
 
 	for _, rs := range router.RouterRouteAll() {
-		_, getTypedResp, err := rs.ReplicasetCallImpl(
+		_, getTypedResp, err := rs.ReplicaCall(
 			ctx,
 			vshard_router.ReplicasetCallOpts{
 				PoolMode: pool.RW,
@@ -96,7 +97,7 @@ func TestReplicasetCall(t *testing.T) {
 	}
 
 	for _, rs := range router.RouterRouteAll() {
-		_, _, err := rs.ReplicasetCallImpl(
+		_, _, err := rs.ReplicaCall(
 			ctx,
 			vshard_router.ReplicasetCallOpts{
 				PoolMode: pool.RW,
