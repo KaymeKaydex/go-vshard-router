@@ -53,7 +53,7 @@ func (e *StdoutLogger) Warn(ctx context.Context, msg string) {
 type MetricsProvider interface {
 	CronDiscoveryEvent(ok bool, duration time.Duration, reason string)
 	RetryOnCall(reason string)
-	RequestDuration(duration time.Duration, ok bool)
+	RequestDuration(duration time.Duration, ok bool, mapReduce bool)
 }
 
 // EmptyMetrics is default empty metrics provider
@@ -62,7 +62,7 @@ type EmptyMetrics struct{}
 
 func (e *EmptyMetrics) CronDiscoveryEvent(ok bool, duration time.Duration, reason string) {}
 func (e *EmptyMetrics) RetryOnCall(reason string)                                         {}
-func (e *EmptyMetrics) RequestDuration(duration time.Duration, ok bool)                   {}
+func (e *EmptyMetrics) RequestDuration(duration time.Duration, ok bool, mapReduce bool)   {}
 
 type TopologyProvider struct {
 	r *Router

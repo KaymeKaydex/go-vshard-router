@@ -29,6 +29,14 @@ type Router struct {
 
 	knownBucketCount atomic.Int32
 
+	// ----------------------- Map-Reduce -----------------------
+	// Storage Ref ID. It must be unique for each ref request
+	// and therefore is global and monotonically growing.
+	refID atomic.Int64
+
+	// worker's count to proceed channel of replicaset's futures
+	nWorkers int32
+
 	cancelDiscovery func()
 }
 
@@ -61,6 +69,8 @@ type Config struct {
 	User             string
 	Password         string
 	PoolOpts         tarantool.Opts
+
+	NWorkers int32
 }
 
 type BucketStatInfo struct {
@@ -155,6 +165,13 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 
 		router.cancelDiscovery = cancelFunc
 	}
+
+	nWorkers := int32(2)
+	if cfg.NWorkers != 0 {
+		nWorkers = cfg.NWorkers
+	}
+
+	router.nWorkers = nWorkers
 
 	return router, err
 }
