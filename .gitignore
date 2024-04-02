@@ -3,3 +3,6 @@
 
 # tt
 .rocks
+*.snap
+*.xlog
+*.log
