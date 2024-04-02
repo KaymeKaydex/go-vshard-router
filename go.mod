@@ -7,7 +7,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/snksoft/crc v1.1.0
 	github.com/stretchr/testify v1.8.4
-	github.com/tarantool/go-tarantool/v2 v2.0.0-20240208121257-f33032e7d0ac
+	github.com/tarantool/go-tarantool/v2 v2.1.0
 	golang.org/x/sync v0.6.0
 )
 

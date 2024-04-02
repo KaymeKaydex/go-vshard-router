@@ -121,15 +121,9 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		r.log().Info(ctx, fmt.Sprintf("try call replicaset %s", rs.info.Name))
 
 		future := rs.conn.Do(req, opts.PoolMode)
-		if future.Err() != nil {
-			err = future.Err()
-			r.log().Error(ctx, fmt.Sprintf("got future error: %s", err))
-
-			continue
-		}
-
 		respData, err := future.Get()
 		if err != nil {
+			r.log().Error(ctx, fmt.Sprintf("got future error: %s", err))
 			r.metrics().RetryOnCall("future_get_error")
 
 			continue
@@ -264,7 +258,7 @@ func (r *Router) RouterMapCallRWImpl(
 			conn := replicaset.conn
 
 			future := conn.Do(req, pool.RW)
-			if err := future.Err(); err != nil {
+			if _, err := future.Get(); err != nil {
 				cancel()
 
 				return fmt.Errorf("rs {%s} storage_ref err: %s", id.String(), err.Error())
@@ -350,7 +344,7 @@ func (r *Router) RouterMapCallRWImpl(
 			conn := replicaset.conn
 
 			future := conn.Do(req, pool.RW)
-			if err := future.Err(); err != nil {
+			if _, err := future.Get(); err != nil {
 				cancel()
 
 				return fmt.Errorf("rs {%s} storage_map err: %s", id.String(), err.Error())
