@@ -5,3 +5,8 @@
 # Tarantool out files
 .rocks
 /examples/customer/tarantool/data
+
+# tt
+*.snap
+*.xlog
+*.log
