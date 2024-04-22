@@ -20,8 +20,11 @@ stop:
 	tarantoolctl stop storage_2_b
 	tarantoolctl stop router_1
 
-enter:
+.PHONY: enter
+router:
 	tarantoolctl enter router_1
+storage:
+	tarantoolctl enter storage_1_a
 
 logcat:
 	tail -f data/*.log
