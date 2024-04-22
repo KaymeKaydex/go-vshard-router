@@ -15,7 +15,7 @@ import (
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
 
-	vshardrouter "github.com/KaymeKaydex/go-vhsard-router"
+	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
 )
 
 func main() {

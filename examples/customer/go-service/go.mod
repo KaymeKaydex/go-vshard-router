@@ -1,9 +1,9 @@
 module customer
 
-go 1.21.4
+go 1.22.2
 
 require (
-	github.com/KaymeKaydex/go-vhsard-router v0.0.7
+	github.com/KaymeKaydex/go-vshard-router v0.0.9
 	github.com/google/uuid v1.6.0
 	github.com/spf13/viper v1.18.2
 	github.com/tarantool/go-tarantool/v2 v2.1.0
