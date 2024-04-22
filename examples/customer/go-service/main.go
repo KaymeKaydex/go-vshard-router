@@ -141,15 +141,17 @@ func (c *controller) CustomerLookupHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	bucketID := c.router.RouterBucketIDStrCRC32(customerID)
-	_, typedFnc, err := c.router.RouterCallImpl(ctx, bucketID, vshardrouter.CallOpts{
+	faces, typedFnc, err := c.router.RouterCallImpl(ctx, bucketID, vshardrouter.CallOpts{
 		VshardMode: vshardrouter.ReadMode,
 		PoolMode:   pool.PreferRO,
-		Timeout:    time.Second,
+		Timeout:    time.Minute,
 	}, "customer_lookup", []interface{}{csID})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	log.Println(faces)
 
 	resp := &CustomerLookupResponse{}
 

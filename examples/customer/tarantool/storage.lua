@@ -112,7 +112,7 @@ function customer_lookup(customer_id)
         })
     end
     customer.accounts = accounts;
-    return customer
+    return customer, {test=123}
 end
 
 function echo(...)
