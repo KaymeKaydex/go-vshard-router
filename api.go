@@ -112,7 +112,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		rs, err = r.BucketResolve(ctx, bucketID)
 		if err != nil {
-			r.log().Debug(ctx, fmt.Sprintf("cant resolve bucket %d", bucketID))
+			r.log().Debug(ctx, fmt.Sprintf("cant resolve bucket %d with error: %s", bucketID, err.Error()))
 
 			r.metrics().RetryOnCall("bucket_resolve_error")
 			continue

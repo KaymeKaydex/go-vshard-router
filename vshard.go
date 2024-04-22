@@ -3,7 +3,6 @@ package vshard_router
 import (
 	"context"
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,13 +19,8 @@ var ErrInvalidConfig = fmt.Errorf("config invalid")
 type Router struct {
 	cfg Config
 
-	idToReplicaset map[uuid.UUID]*Replicaset
-	routeMap       []*Replicaset
-	searchLock     struct {
-		mu        sync.Mutex // запись для per bucket
-		perBucket []chan struct{}
-	}
-
+	idToReplicaset   map[uuid.UUID]*Replicaset
+	routeMap         []*Replicaset
 	knownBucketCount atomic.Int32
 
 	// ----------------------- Map-Reduce -----------------------
@@ -129,13 +123,9 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	}
 
 	router := &Router{
-		cfg:            cfg,
-		idToReplicaset: make(map[uuid.UUID]*Replicaset),
-		routeMap:       make([]*Replicaset, cfg.TotalBucketCount+1),
-		searchLock: struct {
-			mu        sync.Mutex
-			perBucket []chan struct{}
-		}{mu: sync.Mutex{}, perBucket: make([]chan struct{}, cfg.TotalBucketCount+1)},
+		cfg:              cfg,
+		idToReplicaset:   make(map[uuid.UUID]*Replicaset),
+		routeMap:         make([]*Replicaset, cfg.TotalBucketCount+1),
 		knownBucketCount: atomic.Int32{},
 	}
 
