@@ -16,6 +16,7 @@ import (
 	"github.com/tarantool/go-tarantool/v2/pool"
 
 	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
+	"github.com/KaymeKaydex/go-vshard-router/providers/static"
 )
 
 func main() {
@@ -34,7 +35,7 @@ func main() {
 		Logger:           &vshardrouter.StdoutLogger{},
 		DiscoveryTimeout: time.Minute,
 		DiscoveryMode:    vshardrouter.DiscoveryModeOn,
-		Replicasets:      cfg.Storage.Topology,
+		TopologyProvider: static.NewProvider(cfg.Storage.Topology),
 		TotalBucketCount: cfg.Storage.TotalBucketCount,
 		PoolOpts: tarantool.Opts{
 			Timeout: time.Second,
