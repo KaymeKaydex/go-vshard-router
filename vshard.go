@@ -8,11 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
 	"github.com/snksoft/crc"
 
 	tarantool "github.com/tarantool/go-tarantool/v2"
-	"github.com/tarantool/go-tarantool/v2/pool"
 )
 
 var ErrInvalidConfig = fmt.Errorf("config invalid")
@@ -60,7 +58,8 @@ type Config struct {
 	Logger  LogProvider
 	Metrics MetricsProvider
 
-	Replicasets map[ReplicasetInfo][]InstanceInfo
+	TopologyProvider TopologyProvider
+	//Replicasets      map[ReplicasetInfo][]InstanceInfo
 
 	DiscoveryTimeout time.Duration
 	DiscoveryMode    DiscoveryMode
@@ -70,45 +69,12 @@ type Config struct {
 	Password         string
 	PoolOpts         tarantool.Opts
 
-	NWorkers int32
+	NWorkers int32 // todo: rename this, cause NWorkers naming looks strange
 }
 
 type BucketStatInfo struct {
 	BucketID uint64 `mapstructure:"id"`
 	Status   string `mapstructure:"status"`
-}
-
-func (rs *Replicaset) bucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
-	bsInfo := &BucketStatInfo{}
-	bsError := &BucketStatError{}
-
-	req := tarantool.NewCallRequest("vshard.storage.bucket_stat")
-	req = req.Args([]interface{}{bucketID})
-	req = req.Context(ctx)
-
-	future := rs.conn.Do(req, pool.RO)
-	respData, err := future.Get()
-	if err != nil {
-		return BucketStatInfo{}, err
-	}
-
-	var tmp interface{} // todo: fix non-panic crutch
-
-	if respData[0] == nil {
-		err := future.GetTyped(&[]interface{}{tmp, bsError})
-		if err != nil {
-			return BucketStatInfo{}, err
-		}
-	} else {
-		// fucking key-code 1
-		// todo: fix after https://github.com/tarantool/go-tarantool/issues/368
-		err := mapstructure.Decode(respData[0], bsInfo)
-		if err != nil {
-			return BucketStatInfo{}, err
-		}
-	}
-
-	return *bsInfo, bsError
 }
 
 type InstanceInfo struct {
@@ -141,9 +107,9 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 
 	router.knownBucketCount.Store(0)
 
-	err = router.Topology().AddReplicasets(ctx, cfg.Replicasets)
+	err = cfg.TopologyProvider.Init(router.Topology())
 	if err != nil {
-		router.log().Error(ctx, fmt.Sprintf("cant add replicasets with error: %s", err))
+		router.log().Error(ctx, fmt.Sprintf("cant create new topology provider with err: %s", err))
 
 		return nil, err
 	}
@@ -238,24 +204,11 @@ func prepareCfg(ctx context.Context, cfg Config) (Config, error) {
 }
 
 func validateCfg(cfg Config) error {
-	if len(cfg.Replicasets) < 1 {
-		return fmt.Errorf("replicasets are empty")
+	if cfg.TopologyProvider == nil {
+		return fmt.Errorf("topology provider is nil")
 	}
-
 	if cfg.TotalBucketCount == 0 {
 		return fmt.Errorf("bucket count must be grather then 0")
-	}
-
-	for rs := range cfg.Replicasets {
-		// check replicaset name
-		if rs.Name == "" {
-			return fmt.Errorf("one of replicaset name is empty")
-		}
-
-		// check replicaset uuid
-		if rs.UUID == uuid.Nil {
-			return fmt.Errorf("one of replicaset uuid is empty")
-		}
 	}
 
 	return nil
