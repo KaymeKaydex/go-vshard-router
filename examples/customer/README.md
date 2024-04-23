@@ -1,5 +1,4 @@
 ```
-
 unix/:./data/router_1.control> vshard.router.call(1, 'read', 'customer_lookup', {1})
 ---
 - null
