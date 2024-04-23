@@ -44,7 +44,7 @@ func TestNewRouter_InstanceAddr(t *testing.T) {
 			vshard_router.ReplicasetInfo{
 				Name: "123",
 				UUID: uuid.New(),
-			}: []vshard_router.InstanceInfo{
+			}: {
 				{Addr: "first.internal:1212"},
 			},
 		}),

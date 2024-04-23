@@ -14,6 +14,14 @@ type Provider struct {
 }
 
 func NewProvider(rs map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo) *Provider {
+	if rs == nil {
+		panic("rs must not be nil")
+	}
+
+	if len(rs) == 0 {
+		panic("rs must not be empty")
+	}
+
 	return &Provider{rs: rs}
 }
 
