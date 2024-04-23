@@ -129,12 +129,12 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			continue
 		}
 
-		if len(respData) != 2 {
-			r.log().Error(ctx, fmt.Sprintf("invalid response data lenght; current lenght %d", len(respData)))
+		if len(respData) < 1 {
+			err = fmt.Errorf("invalid length of response data: must be >1, current: %d", len(respData))
+
+			r.log().Error(ctx, err.Error())
 
 			r.metrics().RetryOnCall("resp_data_error")
-
-			err = fmt.Errorf("invalid length of response data: must be = 2, current: %d", len(respData))
 			continue
 		}
 
@@ -188,7 +188,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		r.log().Debug(ctx, fmt.Sprintf("got call result response data %s", respData))
 
-		return respData[1], func(result interface{}) error {
+		return respData[1:], func(result interface{}) error {
 			var stub interface{}
 
 			return future.GetTyped(&[]interface{}{&stub, result})
