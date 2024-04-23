@@ -52,7 +52,7 @@ type Config struct {
 	TopologyProvider TopologyProvider // TopologyProvider is required provider
 
 	// Discovery
-	DiscoveryTimeout time.Duration // DiscoveryTimeout is timeout between cron discovery job
+	DiscoveryTimeout time.Duration // DiscoveryTimeout is timeout between cron discovery job; by default there is no timeout
 	DiscoveryMode    DiscoveryMode
 
 	TotalBucketCount uint64
