@@ -1,8 +1,12 @@
+# IDE Files
 .idea
 .vscode
 
-# tt
+# TT
 .rocks
 *.snap
 *.xlog
 *.log
+
+# System
+*.pid
