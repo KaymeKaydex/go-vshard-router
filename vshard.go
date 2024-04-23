@@ -45,23 +45,14 @@ func (r *Router) log() LogProvider {
 	return r.cfg.Logger
 }
 
-type DiscoveryMode int
-
-const (
-	// DiscoveryModeOn is cron discovery with cron timeout
-	DiscoveryModeOn DiscoveryMode = iota
-	DiscoveryModeOnce
-)
-
 type Config struct {
-	// providers
-	Logger  LogProvider
-	Metrics MetricsProvider
+	// Providers
+	Logger           LogProvider      // Logger is not required
+	Metrics          MetricsProvider  // Metrics is not required
+	TopologyProvider TopologyProvider // TopologyProvider is required provider
 
-	TopologyProvider TopologyProvider
-	//Replicasets      map[ReplicasetInfo][]InstanceInfo
-
-	DiscoveryTimeout time.Duration
+	// Discovery
+	DiscoveryTimeout time.Duration // DiscoveryTimeout is timeout between cron discovery job
 	DiscoveryMode    DiscoveryMode
 
 	TotalBucketCount uint64
