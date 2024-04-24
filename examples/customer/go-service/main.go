@@ -202,8 +202,8 @@ type InstanceInfo struct {
 	}
 }
 type SourceTopologyConfig struct {
-	Clusters  map[string]ClusterInfo
-	Instances map[string]InstanceInfo
+	Clusters  map[string]ClusterInfo  `json:"clusters,omitempty" yaml:"clusters" `
+	Instances map[string]InstanceInfo `json:"instances,omitempty" yaml:"instances"`
 }
 
 func readCfg(cfgPath string) Config {
