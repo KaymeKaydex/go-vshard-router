@@ -3,6 +3,8 @@ package viper
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/google/uuid"
 	srcviper "github.com/spf13/viper"
@@ -20,8 +22,51 @@ func NewProvider(v *srcviper.Viper) *Provider {
 		panic("viper entity is nil")
 	}
 
-	v.Unmarshal()
-	return &Provider{v: v}
+	cfg := &SourceTopologyConfig{}
+	err := v.Unmarshal(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	// готовим конфиг для vshard-router`а
+	vshardRouterTopology := make(map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo)
+
+	for rsName, rs := range cfg.Clusters {
+		rsUUID, err := uuid.Parse(rs.ReplicasetUUID)
+		if err != nil {
+			log.Printf("cant parse replicaset uuid: %s", err)
+
+			os.Exit(2)
+		}
+
+		rsInstances := make([]vshardrouter.InstanceInfo, 0)
+
+		for _, instInfo := range cfg.Instances {
+			if instInfo.Cluster != rsName {
+				continue
+			}
+
+			instUUID, err := uuid.Parse(instInfo.Box.InstanceUUID)
+			if err != nil {
+				log.Printf("cant parse replicaset uuid: %s", err)
+
+				panic(err)
+			}
+
+			rsInstances = append(rsInstances, vshardrouter.InstanceInfo{
+				Addr: instInfo.Box.Listen,
+				UUID: instUUID,
+			})
+
+		}
+
+		vshardRouterTopology[vshardrouter.ReplicasetInfo{
+			Name: rsName,
+			UUID: rsUUID,
+		}] = rsInstances
+	}
+
+	return &Provider{v: v, rs: vshardRouterTopology}
 }
 
 func (p *Provider) WatchChanges() *Provider {
