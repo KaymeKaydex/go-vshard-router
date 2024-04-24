@@ -86,6 +86,8 @@ import (
 	"time"
 
 	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
+	"github.com/KaymeKaydex/go-vshard-router/providers/static"
+
 	"github.com/google/uuid"
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
@@ -97,7 +99,7 @@ func main() {
 	directRouter, err := vshardrouter.NewRouter(ctx, vshardrouter.Config{
 		DiscoveryTimeout: time.Minute,
 		DiscoveryMode:    vshardrouter.DiscoveryModeOn,
-		Replicasets: map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
+		TopologyProvider: static.NewProvider(map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
 			vshardrouter.ReplicasetInfo{
 				Name: "replcaset_1",
 				UUID: uuid.New(),
@@ -124,7 +126,7 @@ func main() {
 					UUID: uuid.New(),
 				},
 			},
-		},
+		}),
 		TotalBucketCount: 128000,
 		PoolOpts: tarantool.Opts{
 			Timeout: time.Second,
@@ -170,6 +172,22 @@ func main() {
 	fmt.Printf("interface result: %v", interfaceResult)
 	fmt.Printf("get typed result: %v", info)
 }
+
 ```
 
-## Benchmarks
+## Бенчмарки
+
+Топология:
+- 4 репликасета (x2 инстанса на репликасет)
+- 4 тарантул прокси
+- 1 инстанс гошного сервиса
+### [K6](https://github.com/grafana/k6)
+
+сценарий constant VUes:
+в нагрузке близкой к продовой
+
+```select```
+- go-vshard-router: uncritically worse latency, but 3 times more rps
+  ![Image alt](docs/direct.png)
+- tarantool-router: (80% cpu, heavy rps kills proxy at 100% cpu)
+  ![Image alt](docs/not-direct.png)
