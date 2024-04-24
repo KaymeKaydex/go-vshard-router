@@ -22,16 +22,24 @@ func NewProvider(v *srcviper.Viper) *Provider {
 		panic("viper entity is nil")
 	}
 
-	cfg := &SourceTopologyConfig{}
+	cfg := &TopologyConfig{}
 	err := v.Unmarshal(cfg)
 	if err != nil {
 		panic(err)
 	}
 
+	if cfg.Topology.Instances == nil {
+		panic("instances is nil")
+	}
+
+	if cfg.Topology.Clusters == nil {
+		panic("clusters is nil")
+	}
+
 	// готовим конфиг для vshard-router`а
 	vshardRouterTopology := make(map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo)
 
-	for rsName, rs := range cfg.Clusters {
+	for rsName, rs := range cfg.Topology.Clusters {
 		rsUUID, err := uuid.Parse(rs.ReplicasetUUID)
 		if err != nil {
 			log.Printf("cant parse replicaset uuid: %s", err)
@@ -41,7 +49,7 @@ func NewProvider(v *srcviper.Viper) *Provider {
 
 		rsInstances := make([]vshardrouter.InstanceInfo, 0)
 
-		for _, instInfo := range cfg.Instances {
+		for _, instInfo := range cfg.Topology.Instances {
 			if instInfo.Cluster != rsName {
 				continue
 			}
@@ -113,6 +121,11 @@ type InstanceInfo struct {
 		InstanceUUID string `yaml:"instance_uuid" mapstructure:"instance_uuid" json:"instanceUUID,omitempty"`
 	}
 }
+
+type TopologyConfig struct {
+	Topology SourceTopologyConfig `json:"topology"`
+}
+
 type SourceTopologyConfig struct {
 	Clusters  map[string]ClusterInfo  `json:"clusters,omitempty" yaml:"clusters" `
 	Instances map[string]InstanceInfo `json:"instances,omitempty" yaml:"instances"`
