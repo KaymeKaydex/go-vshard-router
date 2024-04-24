@@ -17,6 +17,14 @@ import (
 // -- Discovery
 // --------------------------------------------------------------------------------
 
+type DiscoveryMode int
+
+const (
+	// DiscoveryModeOn is cron discovery with cron timeout
+	DiscoveryModeOn DiscoveryMode = iota
+	DiscoveryModeOnce
+)
+
 // BucketDiscovery search bucket in whole cluster
 func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replicaset, error) {
 	r.searchLock.mu.Lock()             // локаем чтобы понять можно ли начать ли поиск и не пытается ли узнать другой бакет что искать и записать свой лок канал
