@@ -9,6 +9,10 @@ import (
 	vprovider "github.com/KaymeKaydex/go-vshard-router/providers/viper"
 )
 
+func TestProvider_Close(t *testing.T) {
+	require.NotPanics(t, (&vprovider.Provider{}).Close)
+}
+
 func TestNewProviderNilPanic(t *testing.T) {
 	require.Panics(t, func() {
 		vprovider.NewProvider(nil)
