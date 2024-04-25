@@ -56,9 +56,13 @@ type Config struct {
 	DiscoveryMode    DiscoveryMode
 
 	TotalBucketCount uint64
-	User             string
-	Password         string
-	PoolOpts         tarantool.Opts
+	// ShardKeyGetter is function that returns shard key from ctx
+	// e.x. it will be easy to set your values of shard key inside middleware and don`t worry about library requests
+	ShardKeyGetter func(ctx context.Context) string
+
+	User     string
+	Password string
+	PoolOpts tarantool.Opts
 
 	NWorkers int32 // todo: rename this, cause NWorkers naming looks strange
 }
