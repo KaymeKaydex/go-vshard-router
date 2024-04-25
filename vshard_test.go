@@ -26,7 +26,7 @@ func TestNewRouter_InvalidReplicasetUUID(t *testing.T) {
 		TopologyProvider: static.NewProvider(map[vshard_router.ReplicasetInfo][]vshard_router.InstanceInfo{
 			vshard_router.ReplicasetInfo{
 				Name: "123",
-			}: []vshard_router.InstanceInfo{
+			}: {
 				{Addr: "first.internal:1212"},
 			},
 		}),

@@ -43,6 +43,7 @@ func (e *StdoutLogger) Warn(ctx context.Context, msg string) {
 
 // Metrics
 
+// MetricsProvider is an interface for passing library metrics to your prometheus/graphite and other metrics
 type MetricsProvider interface {
 	CronDiscoveryEvent(ok bool, duration time.Duration, reason string)
 	RetryOnCall(reason string)
