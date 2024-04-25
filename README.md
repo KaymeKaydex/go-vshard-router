@@ -2,6 +2,8 @@
 
 <img align="right" width="159px" src="docs/logo.png">
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/KaymeKaydex/go-vshard-router)](https://goreportcard.com/report/github.com/KaymeKaydex/go-vshard-router)
+
 Translations:
 - [Русский](https://github.com/KaymeKaydex/go-vshard-router/blob/main/README_ru.md)
 
