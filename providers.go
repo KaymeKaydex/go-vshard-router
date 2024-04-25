@@ -63,7 +63,7 @@ func (e *EmptyMetrics) RequestDuration(duration time.Duration, ok bool, mapReduc
 type TopologyProvider interface {
 	// Init should create the current topology at the beginning
 	// and change the state during the process of changing the point of receiving the cluster configuration
-	Init(t *TopologyController) error
+	Init(t TopologyController) error
 	// Close closes all connections if the provider created them
 	Close()
 }

@@ -41,7 +41,7 @@ func (p *Provider) Validate() error {
 	return nil
 }
 
-func (p *Provider) Init(c *vshardrouter.TopologyController) error {
+func (p *Provider) Init(c vshardrouter.TopologyController) error {
 	return c.AddReplicasets(context.TODO(), p.rs)
 }
 
