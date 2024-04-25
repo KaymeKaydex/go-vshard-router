@@ -10,3 +10,6 @@
 
 # System
 *.pid
+
+# Go output
+*.out

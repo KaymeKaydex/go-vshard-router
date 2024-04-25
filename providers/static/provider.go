@@ -26,10 +26,6 @@ func NewProvider(rs map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo)
 }
 
 func (p *Provider) Validate() error {
-	if len(p.rs) < 1 {
-		return fmt.Errorf("replicasets are empty")
-	}
-
 	for rs := range p.rs {
 		// check replicaset name
 		if rs.Name == "" {
