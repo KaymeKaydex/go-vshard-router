@@ -178,7 +178,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	if err != nil {
 		return nil
 	}
-	r.log().Info(ctx, fmt.Sprintf("discovery done since: %s", time.Since(t)))
+	r.log().Info(ctx, fmt.Sprintf("discovery done since: %s, discovered %d buckets", time.Since(t), knownBucket.Load()))
 
 	r.knownBucketCount.Store(knownBucket.Load())
 
