@@ -1,0 +1,131 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Just example :)",
+        "title": "Example customer service Swagger API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://quedafoe.ru",
+            "email": "djassange@ya.ru"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8096",
+    "paths": {
+        "/customer_add": {
+            "post": {
+                "description": "Todo",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Set"
+                ],
+                "summary": "Todo",
+                "parameters": [
+                    {
+                        "description": "Обязательно не должно быть пустым",
+                        "name": "Request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.CustomerAddRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/customer_lookup": {
+            "get": {
+                "description": "Todo",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Get"
+                ],
+                "summary": "Todo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id of customer",
+                        "name": "id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.CustomerLookupResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.CustomerAddRequest": {
+            "type": "object",
+            "properties": {
+                "accounts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "account_id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "customer_id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.CustomerLookupResponse": {
+            "type": "object",
+            "properties": {
+                "accounts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "account_id": {
+                                "type": "integer"
+                            },
+                            "balance": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "customer_id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

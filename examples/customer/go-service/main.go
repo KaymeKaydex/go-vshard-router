@@ -19,6 +19,16 @@ import (
 	"github.com/KaymeKaydex/go-vshard-router/providers/static"
 )
 
+// @title           Example customer service Swagger API
+// @version         1.0
+// @description     Just example :)
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://quedafoe.ru
+// @contact.email  djassange@ya.ru
+
+// @host      localhost:8096
 func main() {
 	ctx := context.Background()
 	var err error
@@ -83,6 +93,14 @@ type CustomerAddRequest struct {
 	} `json:"accounts" msgpack:"accounts"`
 }
 
+// CustomerAddHandler godoc
+// @Summary Todo
+// @Description Todo
+// @Produce json
+// @Param   Request body CustomerAddRequest true "Обязательно не должно быть пустым"
+// @Success      200              {string}  string    "ok"
+// @Router /customer_add [post]
+// @Tags Set
 func (c *controller) CustomerAddHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if r.Method != http.MethodPost {
@@ -127,6 +145,14 @@ type CustomerLookupResponse struct {
 	Name       string `json:"name" msgpack:"name"`
 }
 
+// CustomerLookupHandler godoc
+// @Summary Todo
+// @Description Todo
+// @Produce json
+// @Param id query string false "id of customer"
+// @Success 200 {object} CustomerLookupResponse
+// @Router /customer_lookup [get]
+// @Tags Get
 func (c *controller) CustomerLookupHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	customerID := r.URL.Query().Get("id") // get customer id
