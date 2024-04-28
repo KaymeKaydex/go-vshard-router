@@ -6,7 +6,7 @@ source  = {
 }
 
 dependencies = {
-	"vshard >= 0.1.20",
+	"vshard >= 0.1.26",
 }
 
 build = {
