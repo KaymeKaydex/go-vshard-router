@@ -26,6 +26,8 @@ if arg[1] == 'discovery_disable' then
     cfg.discovery_mode = 'off'
 end
 
+cfg.bucket_count = 10000
+
 -- Start the database with sharding
 vshard = require('vshard')
 vshard.router.cfg(cfg)
