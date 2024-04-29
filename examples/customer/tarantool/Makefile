@@ -6,6 +6,7 @@ libs: # устанавливает все либы в .rocks/lib и .rocks/share
 start: libs
 	tarantoolctl start storage_1_a
 	tarantoolctl start storage_1_b
+	tarantoolctl start storage_1_c
 	tarantoolctl start storage_2_a
 	tarantoolctl start storage_2_b
 	tarantoolctl start router_1
@@ -16,6 +17,7 @@ start: libs
 stop:
 	tarantoolctl stop storage_1_a
 	tarantoolctl stop storage_1_b
+	tarantoolctl stop storage_1_c
 	tarantoolctl stop storage_2_a
 	tarantoolctl stop storage_2_b
 	tarantoolctl stop router_1
