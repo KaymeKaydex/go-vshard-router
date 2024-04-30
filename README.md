@@ -60,7 +60,7 @@ graph TD
     ROUTER1 --> MASTER1
     ROUTER1 --> REPLICA1
 ```
-# Getting started
+## Getting started
 ### Prerequisites
 
 - **[Go](https://go.dev/)**: any one of the **two latest major** [releases](https://go.dev/doc/devel/release) (we test it with these).
