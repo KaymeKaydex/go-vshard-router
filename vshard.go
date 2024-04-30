@@ -20,10 +20,7 @@ type Router struct {
 
 	idToReplicaset map[uuid.UUID]*Replicaset
 	routeMap       []*Replicaset
-	searchLock     struct {
-		mu        sync.Mutex // запись для per bucket
-		perBucket []chan struct{}
-	}
+	searchLock     searchLock
 
 	knownBucketCount atomic.Int32
 

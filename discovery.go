@@ -25,23 +25,41 @@ const (
 	DiscoveryModeOnce
 )
 
+type searchLock struct {
+	mu        sync.Mutex
+	perBucket []chan struct{}
+}
+
+func (s *searchLock) WaitOnSearch(bucketID uint64) {
+	s.mu.Lock()
+	ch := s.perBucket[bucketID]
+	s.mu.Unlock()
+	if ch == nil {
+		return
+	}
+
+	<-ch
+}
+
+func (s *searchLock) StartSearch(bucketID uint64) chan struct{} {
+	s.mu.Lock()
+	ch := make(chan struct{}, 1)
+	s.perBucket[bucketID] = ch
+	s.mu.Unlock()
+	return ch
+}
+
 // BucketDiscovery search bucket in whole cluster
 func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replicaset, error) {
-	r.searchLock.mu.Lock()             // локаем чтобы понять можно ли начать ли поиск и не пытается ли узнать другой бакет что искать и записать свой лок канал
-	<-r.searchLock.perBucket[bucketID] // проверяем что этот бакет ранее не вошел в поиск
+	r.searchLock.WaitOnSearch(bucketID)
 
 	rs := r.routeMap[bucketID]
 	if rs != nil {
-		r.searchLock.mu.Unlock()
-
 		return rs, nil
 	}
 
-	lockCh := make(chan struct{})
-	r.searchLock.perBucket[bucketID] = lockCh
-	r.searchLock.mu.Unlock()
-
-	defer close(lockCh)
+	stopSearchCh := r.searchLock.StartSearch(bucketID)
+	defer close(stopSearchCh)
 
 	r.cfg.Logger.Info(ctx, fmt.Sprintf("Discovering bucket %d", bucketID))
 
