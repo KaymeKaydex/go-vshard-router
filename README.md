@@ -180,6 +180,9 @@ func main() {
   fmt.Printf("get typed result: %v", info)
 }
 ```
+### Learn more examples
+#### [Customer service](examples/customer/README.md)
+Service with go-vshard-router on top of the tarantool example from the original vshard library using raft
 
 ## Benchmarks
 Topology: 
