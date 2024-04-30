@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package integration
 
 import (
@@ -8,6 +11,7 @@ import (
 	"time"
 
 	vshard_router "github.com/KaymeKaydex/go-vshard-router"
+	"github.com/KaymeKaydex/go-vshard-router/providers/static"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -33,14 +37,14 @@ func TestReplicasetCall(t *testing.T) {
 			User:             "test",
 			Password:         "test",
 			TotalBucketCount: 300,
-			Replicasets: map[vshard_router.ReplicasetInfo][]vshard_router.InstanceInfo{
+			TopologyProvider: static.NewProvider(map[vshard_router.ReplicasetInfo][]vshard_router.InstanceInfo{
 				{
 					Name: "replicaset-1",
 					UUID: uuid.New(),
 				}: {
 					{Addr: server, UUID: uuid.New()},
 				},
-			},
+			}),
 		})
 	if err != nil {
 		log.Fatalf("create router err: %s", err.Error())

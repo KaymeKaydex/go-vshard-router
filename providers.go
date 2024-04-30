@@ -43,6 +43,7 @@ func (e *StdoutLogger) Warn(ctx context.Context, msg string) {
 
 // Metrics
 
+// MetricsProvider is an interface for passing library metrics to your prometheus/graphite and other metrics
 type MetricsProvider interface {
 	CronDiscoveryEvent(ok bool, duration time.Duration, reason string)
 	RetryOnCall(reason string)
@@ -62,7 +63,7 @@ func (e *EmptyMetrics) RequestDuration(duration time.Duration, ok bool, mapReduc
 type TopologyProvider interface {
 	// Init should create the current topology at the beginning
 	// and change the state during the process of changing the point of receiving the cluster configuration
-	Init(t *TopologyController) error
+	Init(t TopologyController) error
 	// Close closes all connections if the provider created them
 	Close()
 }

@@ -14,14 +14,18 @@ type Provider struct {
 }
 
 func NewProvider(rs map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo) *Provider {
+	if rs == nil {
+		panic("rs must not be nil")
+	}
+
+	if len(rs) == 0 {
+		panic("rs must not be empty")
+	}
+
 	return &Provider{rs: rs}
 }
 
 func (p *Provider) Validate() error {
-	if len(p.rs) < 1 {
-		return fmt.Errorf("replicasets are empty")
-	}
-
 	for rs := range p.rs {
 		// check replicaset name
 		if rs.Name == "" {
@@ -37,7 +41,7 @@ func (p *Provider) Validate() error {
 	return nil
 }
 
-func (p *Provider) Init(c *vshardrouter.TopologyController) error {
+func (p *Provider) Init(c vshardrouter.TopologyController) error {
 	return c.AddReplicasets(context.TODO(), p.rs)
 }
 

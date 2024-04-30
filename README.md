@@ -2,6 +2,10 @@
 
 <img align="right" width="159px" src="docs/logo.png">
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/KaymeKaydex/go-vshard-router)](https://goreportcard.com/report/github.com/KaymeKaydex/go-vshard-router)
+[![codecov](https://codecov.io/gh/KaymeKaydex/go-vshard-router/graph/badge.svg?token=WLRWE97IT1)](https://codecov.io/gh/KaymeKaydex/go-vshard-router)
+[![Go Reference](https://pkg.go.dev/badge/github.com/KaymeKaydex/go-vshard-router.svg)](https://pkg.go.dev/github.com/KaymeKaydex/go-vshard-router)
+
 Translations:
 - [Русский](https://github.com/KaymeKaydex/go-vshard-router/blob/main/README_ru.md)
 
@@ -89,6 +93,8 @@ import (
   "time"
 
   vshardrouter "github.com/KaymeKaydex/go-vshard-router"
+  "github.com/KaymeKaydex/go-vshard-router/providers/static"
+
   "github.com/google/uuid"
   "github.com/tarantool/go-tarantool/v2"
   "github.com/tarantool/go-tarantool/v2/pool"
@@ -100,7 +106,7 @@ func main() {
   directRouter, err := vshardrouter.NewRouter(ctx, vshardrouter.Config{
     DiscoveryTimeout: time.Minute,
     DiscoveryMode:    vshardrouter.DiscoveryModeOn,
-    Replicasets: map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
+    TopologyProvider: static.NewProvider(map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
       vshardrouter.ReplicasetInfo{
         Name: "replcaset_1",
         UUID: uuid.New(),
@@ -127,7 +133,7 @@ func main() {
           UUID: uuid.New(),
         },
       },
-    },
+    }),
     TotalBucketCount: 128000,
     PoolOpts: tarantool.Opts{
       Timeout: time.Second,
@@ -176,7 +182,7 @@ func main() {
 ```
 
 ## Benchmarks
-Topology:
+Topology: 
 - 4 replicasets (x2 instances per rs)
 - 4 tarantool proxy
 - 1 golang service
@@ -188,5 +194,5 @@ at a load close to production
 ```select```
 - go-vshard-router: uncritically worse latency, but 3 times more rps
   ![Image alt](docs/direct.png)
-- tarantool-router: (80% cpu, heavy rps kills proxy at 100% cpu)
+- tarantool-router: (80% cpu, heavy rps kills proxy at 100% cpu) 
   ![Image alt](docs/not-direct.png)

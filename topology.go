@@ -10,16 +10,24 @@ import (
 	"github.com/tarantool/go-tarantool/v2/pool"
 )
 
+type TopologyController interface {
+	AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceInfo) error
+	RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error
+	RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error
+	AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, instances []InstanceInfo) error
+	AddReplicasets(ctx context.Context, replicasets map[ReplicasetInfo][]InstanceInfo) error
+}
+
 // TopologyController is an entity that allows you to interact with the topology
-type TopologyController struct {
+type controller struct {
 	r *Router
 }
 
-func (r *Router) Topology() *TopologyController {
-	return &TopologyController{r: r}
+func (r *Router) Topology() TopologyController {
+	return &controller{r: r}
 }
 
-func (t *TopologyController) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceInfo) error {
+func (t *controller) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceInfo) error {
 	instance := pool.Instance{
 		Name: info.UUID.String(),
 		Dialer: tarantool.NetDialer{
@@ -31,11 +39,11 @@ func (t *TopologyController) AddInstance(ctx context.Context, rsID uuid.UUID, in
 	return t.r.idToReplicaset[rsID].conn.Add(ctx, instance)
 }
 
-func (t *TopologyController) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error {
+func (t *controller) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error {
 	return t.r.idToReplicaset[rsID].conn.Remove(instanceID.String())
 }
 
-func (t *TopologyController) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, instances []InstanceInfo) error {
+func (t *controller) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, instances []InstanceInfo) error {
 	router := t.r
 	cfg := router.cfg
 
@@ -86,7 +94,7 @@ func (t *TopologyController) AddReplicaset(ctx context.Context, rsInfo Replicase
 	return nil
 }
 
-func (t *TopologyController) AddReplicasets(ctx context.Context, replicasets map[ReplicasetInfo][]InstanceInfo) error {
+func (t *controller) AddReplicasets(ctx context.Context, replicasets map[ReplicasetInfo][]InstanceInfo) error {
 	for rsInfo, rsInstances := range replicasets {
 		err := t.AddReplicaset(ctx, rsInfo, rsInstances)
 		if err != nil {
@@ -97,7 +105,7 @@ func (t *TopologyController) AddReplicasets(ctx context.Context, replicasets map
 	return nil
 }
 
-func (t *TopologyController) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
+func (t *controller) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
 	r := t.r
 
 	errors := r.idToReplicaset[rsID].conn.CloseGraceful()

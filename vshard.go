@@ -3,6 +3,7 @@ package vshard_router
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -17,8 +18,13 @@ var ErrInvalidConfig = fmt.Errorf("config invalid")
 type Router struct {
 	cfg Config
 
-	idToReplicaset   map[uuid.UUID]*Replicaset
-	routeMap         []*Replicaset
+	idToReplicaset map[uuid.UUID]*Replicaset
+	routeMap       []*Replicaset
+	searchLock     struct {
+		mu        sync.Mutex // запись для per bucket
+		perBucket []chan struct{}
+	}
+
 	knownBucketCount atomic.Int32
 
 	// ----------------------- Map-Reduce -----------------------
@@ -39,23 +45,14 @@ func (r *Router) log() LogProvider {
 	return r.cfg.Logger
 }
 
-type DiscoveryMode int
-
-const (
-	// DiscoveryModeOn is cron discovery with cron timeout
-	DiscoveryModeOn DiscoveryMode = iota
-	DiscoveryModeOnce
-)
-
 type Config struct {
-	// providers
-	Logger  LogProvider
-	Metrics MetricsProvider
+	// Providers
+	Logger           LogProvider      // Logger is not required
+	Metrics          MetricsProvider  // Metrics is not required
+	TopologyProvider TopologyProvider // TopologyProvider is required provider
 
-	TopologyProvider TopologyProvider
-	//Replicasets      map[ReplicasetInfo][]InstanceInfo
-
-	DiscoveryTimeout time.Duration
+	// Discovery
+	DiscoveryTimeout time.Duration // DiscoveryTimeout is timeout between cron discovery job; by default there is no timeout
 	DiscoveryMode    DiscoveryMode
 
 	TotalBucketCount uint64
@@ -89,9 +86,13 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	}
 
 	router := &Router{
-		cfg:              cfg,
-		idToReplicaset:   make(map[uuid.UUID]*Replicaset),
-		routeMap:         make([]*Replicaset, cfg.TotalBucketCount+1),
+		cfg:            cfg,
+		idToReplicaset: make(map[uuid.UUID]*Replicaset),
+		routeMap:       make([]*Replicaset, cfg.TotalBucketCount+1),
+		searchLock: struct {
+			mu        sync.Mutex
+			perBucket []chan struct{}
+		}{mu: sync.Mutex{}, perBucket: make([]chan struct{}, cfg.TotalBucketCount+1)},
 		knownBucketCount: atomic.Int32{},
 	}
 
