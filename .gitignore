@@ -2,11 +2,8 @@
 .idea
 .vscode
 
-# Tarantool out files
+# TT
 .rocks
-/examples/customer/tarantool/data
-
-# tt
 *.snap
 *.xlog
 *.log

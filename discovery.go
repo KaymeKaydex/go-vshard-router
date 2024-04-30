@@ -27,10 +27,21 @@ const (
 
 // BucketDiscovery search bucket in whole cluster
 func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replicaset, error) {
+	r.searchLock.mu.Lock()             // локаем чтобы понять можно ли начать ли поиск и не пытается ли узнать другой бакет что искать и записать свой лок канал
+	<-r.searchLock.perBucket[bucketID] // проверяем что этот бакет ранее не вошел в поиск
+
 	rs := r.routeMap[bucketID]
 	if rs != nil {
+		r.searchLock.mu.Unlock()
+
 		return rs, nil
 	}
+
+	lockCh := make(chan struct{})
+	r.searchLock.perBucket[bucketID] = lockCh
+	r.searchLock.mu.Unlock()
+
+	defer close(lockCh)
 
 	r.cfg.Logger.Info(ctx, fmt.Sprintf("Discovering bucket %d", bucketID))
 
@@ -186,7 +197,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	if err != nil {
 		return nil
 	}
-	r.log().Info(ctx, fmt.Sprintf("discovery done since: %s, discovered %d buckets", time.Since(t), knownBucket.Load()))
+	r.log().Info(ctx, fmt.Sprintf("discovery done since: %s", time.Since(t)))
 
 	r.knownBucketCount.Store(knownBucket.Load())
 
