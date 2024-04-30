@@ -27,24 +27,24 @@ func (r *Router) Topology() TopologyController {
 	return &controller{r: r}
 }
 
-func (t *controller) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceInfo) error {
+func (c *controller) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceInfo) error {
 	instance := pool.Instance{
 		Name: info.UUID.String(),
 		Dialer: tarantool.NetDialer{
 			Address:  info.Addr,
-			User:     t.r.cfg.User,
-			Password: t.r.cfg.Password,
+			User:     c.r.cfg.User,
+			Password: c.r.cfg.Password,
 		},
 	}
-	return t.r.idToReplicaset[rsID].conn.Add(ctx, instance)
+	return c.r.idToReplicaset[rsID].conn.Add(ctx, instance)
 }
 
-func (t *controller) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error {
-	return t.r.idToReplicaset[rsID].conn.Remove(instanceID.String())
+func (c *controller) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error {
+	return c.r.idToReplicaset[rsID].conn.Remove(instanceID.String())
 }
 
-func (t *controller) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, instances []InstanceInfo) error {
-	router := t.r
+func (c *controller) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, instances []InstanceInfo) error {
+	router := c.r
 	cfg := router.cfg
 
 	replicaset := &Replicaset{
@@ -94,9 +94,9 @@ func (t *controller) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, i
 	return nil
 }
 
-func (t *controller) AddReplicasets(ctx context.Context, replicasets map[ReplicasetInfo][]InstanceInfo) error {
+func (c *controller) AddReplicasets(ctx context.Context, replicasets map[ReplicasetInfo][]InstanceInfo) error {
 	for rsInfo, rsInstances := range replicasets {
-		err := t.AddReplicaset(ctx, rsInfo, rsInstances)
+		err := c.AddReplicaset(ctx, rsInfo, rsInstances)
 		if err != nil {
 			return err
 		}
@@ -105,8 +105,8 @@ func (t *controller) AddReplicasets(ctx context.Context, replicasets map[Replica
 	return nil
 }
 
-func (t *controller) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
-	r := t.r
+func (c *controller) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
+	r := c.r
 
 	errors := r.idToReplicaset[rsID].conn.CloseGraceful()
 	delete(r.idToReplicaset, rsID)

@@ -24,6 +24,10 @@ type Replicaset struct {
 	bucketCount atomic.Int32
 }
 
+func (rs *Replicaset) String() string {
+	return fmt.Sprintf("%s:%s", rs.info.Name, rs.info.UUID.String())
+}
+
 func (rs *Replicaset) bucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
 	bsInfo := &BucketStatInfo{}
 	bsError := &BucketStatError{}
