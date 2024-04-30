@@ -181,6 +181,9 @@ func main() {
 }
 
 ```
+### Ознакомьтесь с другими примерами
+#### [Customer service](examples/customer/README.ru.md)
+Сервис с go-vshard-router поверх примера тарантула из оригинальной библиотеки vshard с использованием raft
 
 ## Бенчмарки
 

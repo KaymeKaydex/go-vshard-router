@@ -1,0 +1,85 @@
+definitions:
+  main.CustomerAddRequest:
+    properties:
+      accounts:
+        items:
+          properties:
+            account_id:
+              type: integer
+            name:
+              type: string
+          type: object
+        type: array
+      customer_id:
+        type: integer
+      name:
+        type: string
+    type: object
+  main.CustomerLookupResponse:
+    properties:
+      accounts:
+        items:
+          properties:
+            account_id:
+              type: integer
+            balance:
+              type: integer
+            name:
+              type: string
+          type: object
+        type: array
+      customer_id:
+        type: integer
+      name:
+        type: string
+    type: object
+host: localhost:8096
+info:
+  contact:
+    email: djassange@ya.ru
+    name: API Support
+    url: http://quedafoe.ru
+  description: Just example :)
+  termsOfService: http://swagger.io/terms/
+  title: Example customer service Swagger API
+  version: "1.0"
+paths:
+  /customer_add:
+    post:
+      description: Todo
+      parameters:
+      - description: Обязательно не должно быть пустым
+        in: body
+        name: Request
+        required: true
+        schema:
+          $ref: '#/definitions/main.CustomerAddRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+      summary: Todo
+      tags:
+      - Set
+  /customer_lookup:
+    get:
+      description: Todo
+      parameters:
+      - description: id of customer
+        in: query
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.CustomerLookupResponse'
+      summary: Todo
+      tags:
+      - Get
+swagger: "2.0"
