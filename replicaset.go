@@ -17,11 +17,24 @@ type ReplicasetInfo struct {
 	UUID uuid.UUID
 }
 
+func (rsi ReplicasetInfo) String() string {
+	return fmt.Sprintf("{name: %s, uuid: %s}", rsi.Name, rsi.UUID)
+}
+
+type ReplicasetCallOpts struct {
+	PoolMode pool.Mode
+	Timeout  time.Duration
+}
+
 type Replicaset struct {
 	conn *pool.ConnectionPool
 	info ReplicasetInfo
 
 	bucketCount atomic.Int32
+}
+
+func (rs *Replicaset) String() string {
+	return rs.info.String()
 }
 
 func (rs *Replicaset) bucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
@@ -57,12 +70,7 @@ func (rs *Replicaset) bucketStat(ctx context.Context, bucketID uint64) (BucketSt
 	return *bsInfo, bsError
 }
 
-type ReplicasetCallOpts struct {
-	PoolMode pool.Mode
-	Timeout  time.Duration
-}
-
-// ReplicasetCallImpl perform function on remote storage
+// ReplicaCall perform function on remote storage
 // link https://github.com/tarantool/vshard/blob/master/vshard/replicaset.lua#L661
 func (rs *Replicaset) ReplicaCall(
 	ctx context.Context,
