@@ -10,7 +10,7 @@ import (
 
 func TestSearchLock_WaitOnSearch(t *testing.T) {
 	lock := searchLock{
-		mu:        sync.Mutex{},
+		mu:        sync.RWMutex{},
 		perBucket: make([]chan struct{}, 10),
 	}
 

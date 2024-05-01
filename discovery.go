@@ -26,14 +26,12 @@ const (
 )
 
 type searchLock struct {
-	mu        sync.Mutex
+	mu        sync.RWMutex
 	perBucket []chan struct{}
 }
 
 func (s *searchLock) WaitOnSearch(bucketID uint64) {
-	s.mu.Lock()
 	ch := s.perBucket[bucketID]
-	s.mu.Unlock()
 	if ch == nil {
 		return
 	}
@@ -43,9 +41,11 @@ func (s *searchLock) WaitOnSearch(bucketID uint64) {
 
 func (s *searchLock) StartSearch(bucketID uint64) chan struct{} {
 	s.mu.Lock()
-	ch := make(chan struct{}, 1)
+	defer s.mu.Unlock()
+
+	ch := make(chan struct{})
 	s.perBucket[bucketID] = ch
-	s.mu.Unlock()
+
 	return ch
 }
 
@@ -58,6 +58,8 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 		return rs, nil
 	}
 
+	// it`s ok if in the same time we have few active searches
+	// mu per bucket is expansive
 	stopSearchCh := r.searchLock.StartSearch(bucketID)
 	defer close(stopSearchCh)
 
