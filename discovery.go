@@ -54,7 +54,7 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 	for rsID, rs := range r.idToReplicaset {
 		go func(_rs *Replicaset) {
 			defer wg.Done()
-			_, errStat := _rs.bucketStat(ctx, bucketID)
+			_, errStat := _rs.BucketStat(ctx, bucketID)
 			if errStat == nil {
 				resultRs, err = r.BucketSet(bucketID, rsID)
 			}

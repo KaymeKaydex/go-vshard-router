@@ -26,8 +26,15 @@ type ReplicasetCallOpts struct {
 	Timeout  time.Duration
 }
 
+type Pool interface {
+	pool.Pooler
+	Add(ctx context.Context, instance pool.Instance) error
+	Remove(name string) error
+	CloseGraceful() []error
+}
+
 type Replicaset struct {
-	conn *pool.ConnectionPool
+	conn Pool
 	info ReplicasetInfo
 
 	bucketCount atomic.Int32
@@ -37,13 +44,13 @@ func (rs *Replicaset) String() string {
 	return rs.info.String()
 }
 
-func (rs *Replicaset) bucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
+func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
 	bsInfo := &BucketStatInfo{}
 	bsError := &BucketStatError{}
 
-	req := tarantool.NewCallRequest("vshard.storage.bucket_stat")
-	req = req.Args([]interface{}{bucketID})
-	req = req.Context(ctx)
+	req := tarantool.NewCallRequest("vshard.storage.bucket_stat").
+		Args([]interface{}{bucketID}).
+		Context(ctx)
 
 	future := rs.conn.Do(req, pool.RO)
 	respData, err := future.Get()
