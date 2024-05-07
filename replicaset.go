@@ -26,15 +26,9 @@ type ReplicasetCallOpts struct {
 	Timeout  time.Duration
 }
 
-type Pool interface {
-	pool.Pooler
-	Add(ctx context.Context, instance pool.Instance) error
-	Remove(name string) error
-	CloseGraceful() []error
-}
 
 type Replicaset struct {
-	conn Pool
+	conn pool.Pooler
 	info ReplicasetInfo
 
 	bucketCount atomic.Int32
