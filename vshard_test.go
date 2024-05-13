@@ -65,3 +65,43 @@ func BenchmarkRouterBucketIDStrCRC32(b *testing.B) {
 		vshard_router.BucketIDStrCRC32("test_bench_key", uint64(256000))
 	}
 }
+
+func TestInstanceInfo_Validate(t *testing.T) {
+	tCases := []struct {
+		Name  string
+		II    vshard_router.InstanceInfo
+		Valid bool
+	}{
+		{
+			Name:  "no info",
+			II:    vshard_router.InstanceInfo{},
+			Valid: false,
+		},
+		{
+			Name:  "no uuid",
+			II:    vshard_router.InstanceInfo{Addr: "first.internal:1212"},
+			Valid: false,
+		},
+		{
+			Name:  "no addr",
+			II:    vshard_router.InstanceInfo{UUID: uuid.New()},
+			Valid: false,
+		},
+		{
+			Name:  "ok",
+			II:    vshard_router.InstanceInfo{UUID: uuid.New(), Addr: "first.internal:1212"},
+			Valid: true,
+		},
+	}
+
+	for _, tc := range tCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			err := tc.II.Validate()
+			if tc.Valid {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}

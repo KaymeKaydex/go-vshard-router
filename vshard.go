@@ -13,7 +13,10 @@ import (
 	tarantool "github.com/tarantool/go-tarantool/v2"
 )
 
-var ErrInvalidConfig = fmt.Errorf("config invalid")
+var (
+	ErrInvalidConfig       = fmt.Errorf("config invalid")
+	ErrInvalidInstanceInfo = fmt.Errorf("invalid instance info")
+)
 
 type Router struct {
 	cfg Config
@@ -68,6 +71,18 @@ type BucketStatInfo struct {
 type InstanceInfo struct {
 	Addr string
 	UUID uuid.UUID
+}
+
+func (ii InstanceInfo) Validate() error {
+	if ii.UUID == uuid.Nil {
+		return fmt.Errorf("%v: empty uuid", ErrInvalidInstanceInfo)
+	}
+
+	if ii.Addr == "" {
+		return fmt.Errorf("%v: empty addr", ErrInvalidInstanceInfo)
+	}
+
+	return nil
 }
 
 // --------------------------------------------------------------------------------
