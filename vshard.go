@@ -20,10 +20,7 @@ type Router struct {
 
 	idToReplicaset map[uuid.UUID]*Replicaset
 	routeMap       []*Replicaset
-	searchLock     struct {
-		mu        sync.Mutex // запись для per bucket
-		perBucket []chan struct{}
-	}
+	searchLock     searchLock
 
 	knownBucketCount atomic.Int32
 
@@ -86,13 +83,10 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	}
 
 	router := &Router{
-		cfg:            cfg,
-		idToReplicaset: make(map[uuid.UUID]*Replicaset),
-		routeMap:       make([]*Replicaset, cfg.TotalBucketCount+1),
-		searchLock: struct {
-			mu        sync.Mutex
-			perBucket []chan struct{}
-		}{mu: sync.Mutex{}, perBucket: make([]chan struct{}, cfg.TotalBucketCount+1)},
+		cfg:              cfg,
+		idToReplicaset:   make(map[uuid.UUID]*Replicaset),
+		routeMap:         make([]*Replicaset, cfg.TotalBucketCount+1),
+		searchLock:       searchLock{mu: sync.RWMutex{}, perBucket: make([]chan struct{}, cfg.TotalBucketCount+1)},
 		knownBucketCount: atomic.Int32{},
 	}
 

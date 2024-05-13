@@ -25,23 +25,43 @@ const (
 	DiscoveryModeOnce
 )
 
+type searchLock struct {
+	mu        sync.RWMutex
+	perBucket []chan struct{}
+}
+
+func (s *searchLock) WaitOnSearch(bucketID uint64) {
+	ch := s.perBucket[bucketID]
+	if ch == nil {
+		return
+	}
+
+	<-ch
+}
+
+func (s *searchLock) StartSearch(bucketID uint64) chan struct{} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	ch := make(chan struct{})
+	s.perBucket[bucketID] = ch
+
+	return ch
+}
+
 // BucketDiscovery search bucket in whole cluster
 func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replicaset, error) {
-	r.searchLock.mu.Lock()             // локаем чтобы понять можно ли начать ли поиск и не пытается ли узнать другой бакет что искать и записать свой лок канал
-	<-r.searchLock.perBucket[bucketID] // проверяем что этот бакет ранее не вошел в поиск
+	r.searchLock.WaitOnSearch(bucketID)
 
 	rs := r.routeMap[bucketID]
 	if rs != nil {
-		r.searchLock.mu.Unlock()
-
 		return rs, nil
 	}
 
-	lockCh := make(chan struct{})
-	r.searchLock.perBucket[bucketID] = lockCh
-	r.searchLock.mu.Unlock()
-
-	defer close(lockCh)
+	// it`s ok if in the same time we have few active searches
+	// mu per bucket is expansive
+	stopSearchCh := r.searchLock.StartSearch(bucketID)
+	defer close(stopSearchCh)
 
 	r.cfg.Logger.Info(ctx, fmt.Sprintf("Discovering bucket %d", bucketID))
 
@@ -52,6 +72,7 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 	var resultRs *Replicaset
 
 	for rsID, rs := range r.idToReplicaset {
+		rsID := rsID
 		go func(_rs *Replicaset) {
 			defer wg.Done()
 			_, errStat := _rs.BucketStat(ctx, bucketID)
