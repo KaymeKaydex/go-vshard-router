@@ -176,7 +176,6 @@ func (r *Router) BucketReset(bucketID uint64) {
 }
 
 func (r *Router) RouteMapClean() {
-
 	r.routeMap = make([]*Replicaset, r.cfg.TotalBucketCount+1)
 	r.knownBucketCount.Store(0)
 
@@ -206,6 +205,7 @@ func validateCfg(cfg Config) error {
 	if cfg.TopologyProvider == nil {
 		return fmt.Errorf("topology provider is nil")
 	}
+
 	if cfg.TotalBucketCount == 0 {
 		return fmt.Errorf("bucket count must be grather then 0")
 	}

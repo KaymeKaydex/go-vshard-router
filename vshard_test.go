@@ -16,7 +16,6 @@ func TestRouter_RouterBucketIDStrCRC32(t *testing.T) {
 	})
 	t.Run("new logic with current hash sum", func(t *testing.T) {
 		require.Equal(t, uint64(103202), r.RouterBucketIDStrCRC32("2707623829"))
-
 	})
 }
 
@@ -39,5 +38,4 @@ func TestRouter_RouteMapClean(t *testing.T) {
 	require.NotPanics(t, func() {
 		r.RouteMapClean()
 	})
-
 }

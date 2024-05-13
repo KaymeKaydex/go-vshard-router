@@ -20,6 +20,7 @@ func TestSearchLock_WaitOnSearch(t *testing.T) {
 
 	lockStart := time.Now()
 	chStopSearch := lock.StartSearch(3)
+
 	go func() {
 		time.Sleep(time.Millisecond * 10)
 		close(chStopSearch)

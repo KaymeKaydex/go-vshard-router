@@ -38,7 +38,6 @@ func TestNewProvider(t *testing.T) {
 				provider := NewProvider(tc.Source)
 				require.NotNil(t, provider)
 			})
-
 		})
 	}
 }

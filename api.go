@@ -96,7 +96,6 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 	var err error
 
 	for {
-
 		if since := time.Since(timeStart); since > timeout {
 			r.metrics().RequestDuration(since, false, false)
 

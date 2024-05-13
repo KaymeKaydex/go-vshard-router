@@ -65,7 +65,6 @@ func NewProvider(v *srcviper.Viper) *Provider {
 				Addr: instInfo.Box.Listen,
 				UUID: instUUID,
 			})
-
 		}
 
 		vshardRouterTopology[vshardrouter.ReplicasetInfo{
