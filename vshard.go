@@ -75,11 +75,11 @@ type InstanceInfo struct {
 
 func (ii InstanceInfo) Validate() error {
 	if ii.UUID == uuid.Nil {
-		return fmt.Errorf("%v: empty uuid", ErrInvalidInstanceInfo)
+		return fmt.Errorf("%w: empty uuid", ErrInvalidInstanceInfo)
 	}
 
 	if ii.Addr == "" {
-		return fmt.Errorf("%v: empty addr", ErrInvalidInstanceInfo)
+		return fmt.Errorf("%w: empty addr", ErrInvalidInstanceInfo)
 	}
 
 	return nil
