@@ -1,10 +1,10 @@
 ## Unreleased
 
+## 0.0.11
+
 BUG FIXES:
 
 * Fix buckets discovery (it doesn't freeze now)
-
-## 0.0.11
 
 FEATURES:
 
@@ -12,6 +12,8 @@ FEATURES:
 * Add golang-ci logic
 
 REFACTOR:
+
+* WSL lint providers fix
 * Lint refactor with spaces
 * Split tests for shadow and not vshard module
 * Update Makefile with cover & lint
