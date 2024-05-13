@@ -203,8 +203,9 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 					knownBucket.Add(1)
 				}
 
-				// if TotalBucketCount < BUCKET_CHUNK_SIZE then nextFrom equal zero
-				if rawReq.From == *nextFrom {
+				// There are no more buckets
+				// https://github.com/tarantool/vshard/blob/8d299bfe/vshard/storage/init.lua#L1730
+				if nextFrom == nil || *nextFrom == 0 {
 					return nil
 				}
 

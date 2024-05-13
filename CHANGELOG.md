@@ -1,6 +1,13 @@
+## Unreleased
+
+BUG FIXES:
+
+* Fix buckets discovery (it doesn't freeze now)
+
 ## 0.0.11
 
 FEATURES:
+
 * BucketStat has become a public method (#21)
 
 REFACTOR:
