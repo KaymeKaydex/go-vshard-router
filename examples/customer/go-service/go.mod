@@ -6,7 +6,7 @@ require (
 	github.com/KaymeKaydex/go-vshard-router v0.0.9
 	github.com/google/uuid v1.6.0
 	github.com/spf13/viper v1.18.2
-	github.com/tarantool/go-tarantool/v2 v2.1.0
+	github.com/tarantool/go-tarantool/v2 v2.1.1-0.20240507091106-8b2be0133e9d
 )
 
 require (
@@ -36,6 +36,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace (
-	github.com/KaymeKaydex/go-vshard-router v0.0.9 => ../../../
-)
+replace github.com/KaymeKaydex/go-vshard-router v0.0.9 => ../../../
