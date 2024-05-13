@@ -30,6 +30,7 @@ func TestNewProvider(t *testing.T) {
 				require.Panics(t, func() {
 					NewProvider(tc.Source)
 				})
+
 				return
 			}
 
@@ -37,7 +38,6 @@ func TestNewProvider(t *testing.T) {
 				provider := NewProvider(tc.Source)
 				require.NotNil(t, provider)
 			})
-
 		})
 	}
 }

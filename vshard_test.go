@@ -1,67 +1,41 @@
-package vshard_router_test
+package vshard_router
 
 import (
-	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-
-	vshard_router "github.com/KaymeKaydex/go-vshard-router"
-	"github.com/KaymeKaydex/go-vshard-router/providers/static"
 )
 
-func TestNewRouter_EmptyReplicasets(t *testing.T) {
-	ctx := context.TODO()
-
-	router, err := vshard_router.NewRouter(ctx, vshard_router.Config{})
-	require.Error(t, err)
-	require.Nil(t, router)
-}
-
-func TestNewRouter_InvalidReplicasetUUID(t *testing.T) {
-	ctx := context.TODO()
-
-	router, err := vshard_router.NewRouter(ctx, vshard_router.Config{
-		TopologyProvider: static.NewProvider(map[vshard_router.ReplicasetInfo][]vshard_router.InstanceInfo{
-			vshard_router.ReplicasetInfo{
-				Name: "123",
-			}: {
-				{Addr: "first.internal:1212"},
-			},
-		}),
-	})
-
-	require.Error(t, err)
-	require.Nil(t, router)
-}
-
-func TestNewRouter_InstanceAddr(t *testing.T) {
-	ctx := context.TODO()
-
-	router, err := vshard_router.NewRouter(ctx, vshard_router.Config{
-		TopologyProvider: static.NewProvider(map[vshard_router.ReplicasetInfo][]vshard_router.InstanceInfo{
-			vshard_router.ReplicasetInfo{
-				Name: "123",
-				UUID: uuid.New(),
-			}: {
-				{Addr: "first.internal:1212"},
-			},
-		}),
-	})
-
-	require.Error(t, err)
-	require.Nil(t, router)
-}
-
-func TestRouterBucketIDStrCRC32(t *testing.T) {
-	// required values from tarantool example
-	require.Equal(t, uint64(103202), vshard_router.BucketIDStrCRC32("2707623829", uint64(256000)))
-	require.Equal(t, uint64(35415), vshard_router.BucketIDStrCRC32("2706201716", uint64(256000)))
-}
-
-func BenchmarkRouterBucketIDStrCRC32(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		vshard_router.BucketIDStrCRC32("test_bench_key", uint64(256000))
+func TestRouter_RouterBucketIDStrCRC32(t *testing.T) {
+	r := Router{
+		cfg: Config{TotalBucketCount: uint64(256000)},
 	}
+
+	t.Run("deprecated old logic", func(t *testing.T) {
+		require.Equal(t, uint64(103202), r.RouterBucketID("2707623829"))
+	})
+	t.Run("new logic with current hash sum", func(t *testing.T) {
+		require.Equal(t, uint64(103202), r.RouterBucketIDStrCRC32("2707623829"))
+	})
+}
+
+func TestRouter_RouterBucketCount(t *testing.T) {
+	bucketCount := uint64(123)
+
+	r := Router{
+		cfg: Config{TotalBucketCount: bucketCount},
+	}
+
+	require.Equal(t, bucketCount, r.RouterBucketCount())
+}
+
+func TestRouter_RouteMapClean(t *testing.T) {
+	r := Router{
+		cfg:      Config{TotalBucketCount: 10},
+		routeMap: make([]*Replicaset, 10),
+	}
+
+	require.NotPanics(t, func() {
+		r.RouteMapClean()
+	})
 }

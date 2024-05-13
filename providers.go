@@ -21,10 +21,10 @@ type LogProvider interface {
 
 type EmptyLogger struct{}
 
-func (e *EmptyLogger) Info(ctx context.Context, msg string)  {}
-func (e *EmptyLogger) Debug(ctx context.Context, msg string) {}
-func (e *EmptyLogger) Error(ctx context.Context, msg string) {}
-func (e *EmptyLogger) Warn(ctx context.Context, msg string)  {}
+func (e *EmptyLogger) Info(_ context.Context, _ string)  {}
+func (e *EmptyLogger) Debug(_ context.Context, _ string) {}
+func (e *EmptyLogger) Error(_ context.Context, _ string) {}
+func (e *EmptyLogger) Warn(_ context.Context, _ string)  {}
 
 type StdoutLogger struct{}
 

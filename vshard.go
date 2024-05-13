@@ -13,7 +13,10 @@ import (
 	tarantool "github.com/tarantool/go-tarantool/v2"
 )
 
-var ErrInvalidConfig = fmt.Errorf("config invalid")
+var (
+	ErrInvalidConfig       = fmt.Errorf("config invalid")
+	ErrInvalidInstanceInfo = fmt.Errorf("invalid instance info")
+)
 
 type Router struct {
 	cfg Config
@@ -68,6 +71,18 @@ type BucketStatInfo struct {
 type InstanceInfo struct {
 	Addr string
 	UUID uuid.UUID
+}
+
+func (ii InstanceInfo) Validate() error {
+	if ii.UUID == uuid.Nil {
+		return fmt.Errorf("%w: empty uuid", ErrInvalidInstanceInfo)
+	}
+
+	if ii.Addr == "" {
+		return fmt.Errorf("%w: empty addr", ErrInvalidInstanceInfo)
+	}
+
+	return nil
 }
 
 // --------------------------------------------------------------------------------
@@ -161,14 +176,12 @@ func (r *Router) BucketReset(bucketID uint64) {
 }
 
 func (r *Router) RouteMapClean() {
-
 	r.routeMap = make([]*Replicaset, r.cfg.TotalBucketCount+1)
 	r.knownBucketCount.Store(0)
 
 	for _, rs := range r.idToReplicaset {
 		rs.bucketCount.Store(0)
 	}
-
 }
 
 func prepareCfg(ctx context.Context, cfg Config) (Config, error) {
@@ -192,6 +205,7 @@ func validateCfg(cfg Config) error {
 	if cfg.TopologyProvider == nil {
 		return fmt.Errorf("topology provider is nil")
 	}
+
 	if cfg.TotalBucketCount == 0 {
 		return fmt.Errorf("bucket count must be grather then 0")
 	}

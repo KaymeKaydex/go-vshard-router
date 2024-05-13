@@ -10,6 +10,8 @@ import (
 	"github.com/tarantool/go-tarantool/v2/pool"
 )
 
+var ErrReplicasetNotExists = fmt.Errorf("replicaset not exists")
+
 type TopologyController interface {
 	AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceInfo) error
 	RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error
@@ -28,6 +30,11 @@ func (r *Router) Topology() TopologyController {
 }
 
 func (c *controller) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceInfo) error {
+	err := info.Validate()
+	if err != nil {
+		return err
+	}
+
 	instance := pool.Instance{
 		Name: info.UUID.String(),
 		Dialer: tarantool.NetDialer{
@@ -36,11 +43,22 @@ func (c *controller) AddInstance(ctx context.Context, rsID uuid.UUID, info Insta
 			Password: c.r.cfg.Password,
 		},
 	}
-	return c.r.idToReplicaset[rsID].conn.Add(ctx, instance)
+
+	rs := c.r.idToReplicaset[rsID]
+	if rs == nil {
+		return ErrReplicasetNotExists
+	}
+
+	return rs.conn.Add(ctx, instance)
 }
 
 func (c *controller) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error {
-	return c.r.idToReplicaset[rsID].conn.Remove(instanceID.String())
+	rs := c.r.idToReplicaset[rsID]
+	if rs == nil {
+		return ErrReplicasetNotExists
+	}
+
+	return rs.conn.Remove(instanceID.String())
 }
 
 func (c *controller) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, instances []InstanceInfo) error {
@@ -108,7 +126,12 @@ func (c *controller) AddReplicasets(ctx context.Context, replicasets map[Replica
 func (c *controller) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
 	r := c.r
 
-	errors := r.idToReplicaset[rsID].conn.CloseGraceful()
+	rs := r.idToReplicaset[rsID]
+	if rs == nil {
+		return []error{ErrReplicasetNotExists}
+	}
+
+	errors := rs.conn.CloseGraceful()
 	delete(r.idToReplicaset, rsID)
 
 	return errors

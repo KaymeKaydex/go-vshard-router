@@ -83,7 +83,6 @@ func TestReplicaset_BucketStat(t *testing.T) {
 		// todo: add real tests
 		require.Panics(t, func() {
 			_, err = rs.BucketStat(ctx, 123)
-
 		})
 	})
 }
