@@ -9,6 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestRouter_Topology(t *testing.T) {
+	router := Router{}
+
+	require.NotNil(t, router.Topology())
+}
+
 func TestController_AddInstance(t *testing.T) {
 	ctx := context.Background()
 
@@ -44,5 +50,19 @@ func TestController_RemoveInstance(t *testing.T) {
 
 		err := router.Topology().RemoveInstance(ctx, uuid.New(), uuid.New())
 		require.True(t, errors.Is(err, ErrReplicasetNotExists))
+	})
+}
+
+func TestController_RemoveReplicaset(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("no such replicaset", func(t *testing.T) {
+		router := Router{
+			idToReplicaset: map[uuid.UUID]*Replicaset{},
+		}
+
+		errs := router.Topology().RemoveReplicaset(ctx, uuid.New())
+
+		require.True(t, errors.Is(errs[0], ErrReplicasetNotExists))
 	})
 }

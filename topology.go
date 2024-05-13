@@ -126,7 +126,12 @@ func (c *controller) AddReplicasets(ctx context.Context, replicasets map[Replica
 func (c *controller) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
 	r := c.r
 
-	errors := r.idToReplicaset[rsID].conn.CloseGraceful()
+	rs := r.idToReplicaset[rsID]
+	if rs == nil {
+		return []error{ErrReplicasetNotExists}
+	}
+
+	errors := rs.conn.CloseGraceful()
 	delete(r.idToReplicaset, rsID)
 
 	return errors
