@@ -17,24 +17,34 @@ type ReplicasetInfo struct {
 	UUID uuid.UUID
 }
 
+func (rsi ReplicasetInfo) String() string {
+	return fmt.Sprintf("{name: %s, uuid: %s}", rsi.Name, rsi.UUID)
+}
+
+type ReplicasetCallOpts struct {
+	PoolMode pool.Mode
+	Timeout  time.Duration
+}
+
+
 type Replicaset struct {
-	conn *pool.ConnectionPool
+	conn pool.Pooler
 	info ReplicasetInfo
 
 	bucketCount atomic.Int32
 }
 
 func (rs *Replicaset) String() string {
-	return fmt.Sprintf("%s:%s", rs.info.Name, rs.info.UUID.String())
+	return rs.info.String()
 }
 
-func (rs *Replicaset) bucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
+func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
 	bsInfo := &BucketStatInfo{}
 	bsError := &BucketStatError{}
 
-	req := tarantool.NewCallRequest("vshard.storage.bucket_stat")
-	req = req.Args([]interface{}{bucketID})
-	req = req.Context(ctx)
+	req := tarantool.NewCallRequest("vshard.storage.bucket_stat").
+		Args([]interface{}{bucketID}).
+		Context(ctx)
 
 	future := rs.conn.Do(req, pool.RO)
 	respData, err := future.Get()
@@ -59,11 +69,6 @@ func (rs *Replicaset) bucketStat(ctx context.Context, bucketID uint64) (BucketSt
 	}
 
 	return *bsInfo, bsError
-}
-
-type ReplicasetCallOpts struct {
-	PoolMode pool.Mode
-	Timeout  time.Duration
 }
 
 // ReplicaCall perform function on remote storage

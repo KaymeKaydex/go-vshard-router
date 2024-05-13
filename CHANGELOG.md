@@ -1,9 +1,13 @@
 ## 0.0.11
 
+FEATURES:
+* BucketStat has become a public method (#21)
+
 REFACTOR:
 
-* add more tests for providers
+* Add more tests for providers
 * TopologyController now is an interface
+* Pool struct has been replaced with the Pooler interface, which has improved coverage (#21)
 
 ## 0.0.10
 
