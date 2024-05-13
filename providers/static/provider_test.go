@@ -30,6 +30,7 @@ func TestNewProvider(t *testing.T) {
 				require.Panics(t, func() {
 					NewProvider(tc.Source)
 				})
+
 				return
 			}
 

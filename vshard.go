@@ -183,7 +183,6 @@ func (r *Router) RouteMapClean() {
 	for _, rs := range r.idToReplicaset {
 		rs.bucketCount.Store(0)
 	}
-
 }
 
 func prepareCfg(ctx context.Context, cfg Config) (Config, error) {

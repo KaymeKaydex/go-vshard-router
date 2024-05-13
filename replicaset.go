@@ -26,7 +26,6 @@ type ReplicasetCallOpts struct {
 	Timeout  time.Duration
 }
 
-
 type Replicaset struct {
 	conn pool.Pooler
 	info ReplicasetInfo

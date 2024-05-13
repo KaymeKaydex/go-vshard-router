@@ -2,9 +2,12 @@
 
 FEATURES:
 * BucketStat has become a public method (#21)
+* Add golang-ci logic
 
 REFACTOR:
-
+* Lint refactor with spaces
+* Split tests for shadow and not vshard module
+* Update Makefile with cover & lint
 * Add more tests for providers
 * TopologyController now is an interface
 * Pool struct has been replaced with the Pooler interface, which has improved coverage (#21)

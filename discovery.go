@@ -83,6 +83,7 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 	}
 
 	wg.Wait()
+
 	if err != nil || resultRs == nil {
 		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
 	}
@@ -211,7 +212,6 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 				rawReq.From = *nextFrom
 			}
 		})
-
 	}
 
 	err := errGr.Wait()
