@@ -33,3 +33,16 @@ func TestController_AddInstance(t *testing.T) {
 		require.True(t, errors.Is(err, ErrInvalidInstanceInfo))
 	})
 }
+
+func TestController_RemoveInstance(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("no such replicaset", func(t *testing.T) {
+		router := Router{
+			idToReplicaset: map[uuid.UUID]*Replicaset{},
+		}
+
+		err := router.Topology().RemoveInstance(ctx, uuid.New(), uuid.New())
+		require.True(t, errors.Is(err, ErrReplicasetNotExists))
+	})
+}
