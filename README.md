@@ -1,6 +1,6 @@
 # Go VShard Router
 
-<img align="right" width="159px" src="docs/logo.png">
+<img align="right" width="159px" src="docs/static/logo.png" alt="логотип go vshard router">
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/KaymeKaydex/go-vshard-router)](https://goreportcard.com/report/github.com/KaymeKaydex/go-vshard-router)
 [![codecov](https://codecov.io/gh/KaymeKaydex/go-vshard-router/graph/badge.svg?token=WLRWE97IT1)](https://codecov.io/gh/KaymeKaydex/go-vshard-router)
@@ -11,7 +11,7 @@ Translations:
 
 
 go-vshard-router is a library for sending requests to a sharded tarantool cluster directly,
-without using tarantool-router. go-vshard-router takes a new approach to creating your cluster
+without using tarantool-router. This library based on [tarantool vhsard library router](https://github.com/tarantool/vshard/blob/master/vshard/router/init.lua). go-vshard-router takes a new approach to creating your cluster
 
 Old cluster schema
 ```mermaid
@@ -196,6 +196,6 @@ at a load close to production
 
 ```select```
 - go-vshard-router: uncritically worse latency, but 3 times more rps
-  ![Image alt](docs/direct.png)
+  ![Image alt](docs/static/direct.png)
 - tarantool-router: (80% cpu, heavy rps kills proxy at 100% cpu) 
-  ![Image alt](docs/not-direct.png)
+  ![Image alt](docs/static/not-direct.png)
