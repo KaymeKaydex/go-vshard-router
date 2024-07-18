@@ -181,6 +181,8 @@ func main() {
 }
 ```
 ### Learn more examples
+#### Quick Start
+Learn with th [Quick Start](docs/doc.md), which include  examples and theory.
 #### [Customer service](examples/customer/README.md)
 Service with go-vshard-router on top of the tarantool example from the original vshard library using raft
 
