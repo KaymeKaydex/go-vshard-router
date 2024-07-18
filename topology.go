@@ -52,7 +52,7 @@ func (c *controller) AddInstance(ctx context.Context, rsID uuid.UUID, info Insta
 	return rs.conn.Add(ctx, instance)
 }
 
-func (c *controller) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error {
+func (c *controller) RemoveInstance(_ context.Context, rsID, instanceID uuid.UUID) error {
 	rs := c.r.idToReplicaset[rsID]
 	if rs == nil {
 		return ErrReplicasetNotExists
