@@ -72,7 +72,7 @@ func (p *Provider) Init(c vshardrouter.TopologyController) error {
 							return fmt.Errorf("cant parse replicaset %s uuid %s", replicaset.Name, rsInfoNode.Value)
 						}
 					case "master":
-						// TODO: now we dont support non raft implementation
+						// TODO: now we dont support non master auto implementation
 					default:
 						continue
 					}
