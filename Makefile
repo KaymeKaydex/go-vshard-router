@@ -24,7 +24,8 @@ test/integration:
 	@$(MAKE) -C ./tests/integration test
 
 generate/mocks:
-	mockery --name=Pool --case=underscore --output=mocks/pool --outpkg=mockpool
+	mockery --name=Pool --case=underscore --output=mocks/pool --outpkg=mockpool # need fix it later
+	mockery --name=TopologyController --case=underscore --output=mocks/topology --outpkg=mocktopology
 
 .PHONY: lint
 lint: install-lint
