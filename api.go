@@ -401,6 +401,7 @@ func (r *Router) RouterMapCallRWImpl(
 				}
 
 				isVShardRespOk := false
+
 				err = future.GetTyped(&[]interface{}{&isVShardRespOk})
 				if err != nil {
 					cancel()

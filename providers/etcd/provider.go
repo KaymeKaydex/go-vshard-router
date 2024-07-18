@@ -3,11 +3,12 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"log"
+	"path/filepath"
+
 	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
 	"github.com/google/uuid"
 	"go.etcd.io/etcd/client/v2"
-	"log"
-	"path/filepath"
 )
 
 // Check that provider implements TopologyProvider interface
@@ -64,6 +65,7 @@ func (p *Provider) Init(c vshardrouter.TopologyController) error {
 				replicaset := vshardrouter.ReplicasetInfo{}
 
 				replicaset.Name = filepath.Base(rsNode.Key)
+
 				for _, rsInfoNode := range rsNode.Nodes {
 					switch filepath.Base(rsInfoNode.Key) {
 					case "replicaset_uuid":
@@ -87,6 +89,7 @@ func (p *Provider) Init(c vshardrouter.TopologyController) error {
 
 			for _, instanceNode := range node.Nodes {
 				instance := &vshardrouter.InstanceInfo{}
+
 				for _, instanceInfoNode := range instanceNode.Nodes {
 					switch filepath.Base(instanceInfoNode.Key) {
 					case "cluster":
@@ -104,7 +107,6 @@ func (p *Provider) Init(c vshardrouter.TopologyController) error {
 							}
 						}
 					}
-
 				}
 			}
 		default:
