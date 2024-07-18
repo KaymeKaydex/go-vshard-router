@@ -12,6 +12,9 @@ import (
 	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
 )
 
+// Check that provider implements TopologyProvider interface
+var _ vshardrouter.TopologyProvider = (*Provider)(nil)
+
 type Provider struct {
 	v  *srcviper.Viper
 	rs map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo

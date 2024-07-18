@@ -1,5 +1,16 @@
 ## Unreleased
 
+FEATURES:
+
+* Added etcd v2 topology provider implementation (#16)
+* Add TopologyController mock for testing improve
+
+REFACTOR:
+
+* Refactored docs (add QuickStart doc) and that library base on vhsard router
+
+
+
 ## 0.0.11
 
 BUG FIXES:

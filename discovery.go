@@ -159,6 +159,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	}
 
 	t := time.Now()
+
 	r.log().Info(ctx, "start discovery all buckets")
 
 	knownBucket := atomic.Int32{}
