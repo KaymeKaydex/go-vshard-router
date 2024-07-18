@@ -1,6 +1,6 @@
 # Go VShard Router
 
-<img align="right" width="159px" src="docs/logo.png">
+<img align="right" width="159px" src="docs/static/logo.png" alt="go vshard router logo">
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/KaymeKaydex/go-vshard-router)](https://goreportcard.com/report/github.com/KaymeKaydex/go-vshard-router)
 [![codecov](https://codecov.io/gh/KaymeKaydex/go-vshard-router/graph/badge.svg?token=WLRWE97IT1)](https://codecov.io/gh/KaymeKaydex/go-vshard-router)
@@ -10,7 +10,7 @@ Translations:
 - [English](https://github.com/KaymeKaydex/go-vshard-router/blob/main/README.md)
 
 go-vshard-router — библиотека для отправки запросов напрямую в стораджа в шардированный кластер tarantool,
-без использования tarantool-router. go-vshard-router применяет новый подход к созданию кластера
+без использования tarantool-router.  Эта библиотека написана на основе [модуля библиотеки tarantool vhsard router](https://github.com/tarantool/vshard/blob/master/vshard/router/init.lua). go-vshard-router применяет новый подход к созданию кластера
 
 Схема кластера с tarantool-proxy
 ```mermaid
@@ -182,8 +182,10 @@ func main() {
 
 ```
 ### Ознакомьтесь с другими примерами
+#### Быстрое начало
+Познакомьтесь с  [Полной документацией](docs/doc.md), которая включает в себя примеры и теорию.
 #### [Customer service](examples/customer/README.ru.md)
-Сервис с go-vshard-router поверх примера тарантула из оригинальной библиотеки vshard с использованием raft
+Сервис с go-vshard-router поверх примера тарантула из оригинальной библиотеки vshard с использованием raft.
 
 ## Бенчмарки
 
@@ -198,6 +200,6 @@ func main() {
 
 ```select```
 - go-vshard-router: uncritically worse latency, but 3 times more rps
-  ![Image alt](docs/direct.png)
+  ![Image alt](docs/static/direct.png)
 - tarantool-router: (80% cpu, heavy rps kills proxy at 100% cpu)
-  ![Image alt](docs/not-direct.png)
+  ![Image alt](docs/static/not-direct.png)
