@@ -207,7 +207,7 @@ func validateCfg(cfg Config) error {
 	}
 
 	if cfg.TotalBucketCount == 0 {
-		return fmt.Errorf("bucket count must be grather then 0")
+		return fmt.Errorf("bucket count must be greater than 0")
 	}
 
 	return nil
