@@ -17,7 +17,7 @@ func TestNewProvider(t *testing.T) {
 		{nil},
 		{make(map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo)},
 		{map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
-			vshardrouter.ReplicasetInfo{}: {
+			vshardrouter.ReplicasetInfo{}: { //nolint: gofmt
 				vshardrouter.InstanceInfo{},
 				vshardrouter.InstanceInfo{},
 			},
@@ -51,7 +51,7 @@ func TestProvider_Validate(t *testing.T) {
 		{
 			Name: "empty name",
 			Source: map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
-				vshardrouter.ReplicasetInfo{}: {
+				vshardrouter.ReplicasetInfo{}: { //nolint: gofmt
 					vshardrouter.InstanceInfo{},
 					vshardrouter.InstanceInfo{},
 				},
@@ -61,7 +61,7 @@ func TestProvider_Validate(t *testing.T) {
 		{
 			Name: "no uuid",
 			Source: map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
-				vshardrouter.ReplicasetInfo{Name: "rs_1"}: {
+				vshardrouter.ReplicasetInfo{Name: "rs_1"}: { //nolint: gofmt
 					vshardrouter.InstanceInfo{},
 					vshardrouter.InstanceInfo{},
 				},
@@ -71,7 +71,7 @@ func TestProvider_Validate(t *testing.T) {
 		{
 			Name: "valid",
 			Source: map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
-				vshardrouter.ReplicasetInfo{Name: "rs_1", UUID: uuid.New()}: {
+				vshardrouter.ReplicasetInfo{Name: "rs_1", UUID: uuid.New()}: { //nolint: gofmt
 					vshardrouter.InstanceInfo{},
 					vshardrouter.InstanceInfo{},
 				},

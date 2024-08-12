@@ -1,4 +1,4 @@
-package vshard_router
+package vshard_router //nolint:revive
 
 import (
 	"context"
@@ -127,13 +127,11 @@ func (r *Router) DiscoveryHandleBuckets(ctx context.Context, rs *Replicaset, buc
 			count++
 
 			if oldRs != nil {
-				bc := oldRs.bucketCount
-
 				if _, exists := affected[oldRs]; !exists {
-					affected[oldRs] = int(bc.Load())
+					affected[oldRs] = int(oldRs.bucketCount.Load())
 				}
 
-				oldRs.bucketCount.Store(bc.Load() - 1)
+				oldRs.bucketCount.Add(-1)
 			} else {
 				//                 router.known_bucket_count = router.known_bucket_count + 1
 				r.knownBucketCount.Add(1)
@@ -143,13 +141,13 @@ func (r *Router) DiscoveryHandleBuckets(ctx context.Context, rs *Replicaset, buc
 	}
 
 	if count != rs.bucketCount.Load() {
-		r.cfg.Logger.Info(ctx, fmt.Sprintf("Updated %s buckets: was %d, became %d", rs.info.Name, rs.bucketCount, count))
+		r.cfg.Logger.Info(ctx, fmt.Sprintf("Updated %s buckets: was %d, became %d", rs.info.Name, rs.bucketCount.Load(), count))
 	}
 
 	rs.bucketCount.Store(count)
 
 	for rs, oldBucketCount := range affected {
-		r.log().Info(ctx, fmt.Sprintf("Affected buckets of %s: was %d, became %d", rs.info.Name, oldBucketCount, rs.bucketCount))
+		r.log().Info(ctx, fmt.Sprintf("Affected buckets of %s: was %d, became %d", rs.info.Name, oldBucketCount, rs.bucketCount.Load()))
 	}
 }
 
@@ -218,7 +216,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 
 	err := errGr.Wait()
 	if err != nil {
-		return nil
+		return fmt.Errorf("errGr.Wait() err: %w", err)
 	}
 	r.log().Info(ctx, fmt.Sprintf("discovery done since: %s", time.Since(t)))
 

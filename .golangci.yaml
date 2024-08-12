@@ -21,10 +21,22 @@ linters:
     - goconst
     - goimports
     - gosec
+    - gosimple
     - govet
     - ineffassign
     - revive
     - typecheck
     - exportloopref
     - prealloc
-    - wsl
+    # - wls # excluded from linters list because produces too many noise
+    - staticcheck
+    - unused
+    - contextcheck
+    - durationcheck
+    - errname
+    - exhaustive
+    - gocritic
+    - gofmt
+    - nilerr
+    - nilnil
+    - usestdlibvars

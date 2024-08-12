@@ -1,4 +1,4 @@
-package vshard_router
+package vshard_router //nolint:revive
 
 import (
 	"context"
@@ -92,7 +92,7 @@ func (ii InstanceInfo) Validate() error {
 func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	var err error
 
-	cfg, err = prepareCfg(ctx, cfg)
+	cfg, err = prepareCfg(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func (r *Router) RouteMapClean() {
 	}
 }
 
-func prepareCfg(ctx context.Context, cfg Config) (Config, error) {
+func prepareCfg(cfg Config) (Config, error) {
 	err := validateCfg(cfg)
 	if err != nil {
 		return Config{}, fmt.Errorf("%v: %v", ErrInvalidConfig, err)
@@ -239,6 +239,8 @@ func (r *Router) RouterBucketIDStrCRC32(shardKey string) uint64 {
 }
 
 // RouterBucketIDMPCRC32 is not supported now
+//
+//nolint:revive
 func RouterBucketIDMPCRC32(total uint64, keys ...string) {}
 
 func (r *Router) RouterBucketCount() uint64 {

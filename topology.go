@@ -1,4 +1,4 @@
-package vshard_router
+package vshard_router //nolint:revive
 
 import (
 	"context"
@@ -123,7 +123,7 @@ func (c *controller) AddReplicasets(ctx context.Context, replicasets map[Replica
 	return nil
 }
 
-func (c *controller) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
+func (c *controller) RemoveReplicaset(_ context.Context, rsID uuid.UUID) []error {
 	r := c.r
 
 	rs := r.idToReplicaset[rsID]
