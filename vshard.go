@@ -21,9 +21,18 @@ var (
 type Router struct {
 	cfg Config
 
-	idToReplicaset map[uuid.UUID]*Replicaset
-	routeMap       []*Replicaset
-	searchLock     searchLock
+	// idToReplicasetMutex guards not the map itself, but the variable idToReplicaset.
+	// idToReplicaset is an immutable object by our convention.
+	// Whenever we add or remove a replicaset, we create a new map object.
+	// idToReplicaset can be modified only by TopologyController methods.
+	// Assuming that we rarely add or remove some replicaset,
+	// it should be the simplest and most efficient way of handling concurrent access.
+	// Additionally, we can safely iterate over a map because it never changes.
+	idToReplicasetMutex sync.RWMutex
+	idToReplicaset      map[uuid.UUID]*Replicaset
+
+	routeMap   []*Replicaset
+	searchLock searchLock
 
 	knownBucketCount atomic.Int32
 
@@ -144,7 +153,9 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 
 // BucketSet Set a bucket to a replicaset.
 func (r *Router) BucketSet(bucketID uint64, rsID uuid.UUID) (*Replicaset, error) {
-	rs := r.idToReplicaset[rsID]
+	idToReplicasetRef := r.getIDToReplicaset()
+
+	rs := idToReplicasetRef[rsID]
 	if rs == nil {
 		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
 	}
@@ -176,10 +187,12 @@ func (r *Router) BucketReset(bucketID uint64) {
 }
 
 func (r *Router) RouteMapClean() {
+	idToReplicasetRef := r.getIDToReplicaset()
+
 	r.routeMap = make([]*Replicaset, r.cfg.TotalBucketCount+1)
 	r.knownBucketCount.Store(0)
 
-	for _, rs := range r.idToReplicaset {
+	for _, rs := range idToReplicasetRef {
 		rs.bucketCount.Store(0)
 	}
 }

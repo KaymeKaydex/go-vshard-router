@@ -65,13 +65,15 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 
 	r.cfg.Logger.Info(ctx, fmt.Sprintf("Discovering bucket %d", bucketID))
 
+	idToReplicasetRef := r.getIDToReplicaset()
+
 	wg := sync.WaitGroup{}
-	wg.Add(len(r.idToReplicaset))
+	wg.Add(len(idToReplicasetRef))
 
 	var err error
 	var resultRs *Replicaset
 
-	for rsID, rs := range r.idToReplicaset {
+	for rsID, rs := range idToReplicasetRef {
 		rsID := rsID
 		go func(_rs *Replicaset) {
 			defer wg.Done()
@@ -164,7 +166,9 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 
 	errGr, ctx := errgroup.WithContext(ctx)
 
-	for _, rs := range r.idToReplicaset {
+	idToReplicasetRef := r.getIDToReplicaset()
+
+	for _, rs := range idToReplicasetRef {
 		rs := rs
 
 		errGr.Go(func() error {
