@@ -3,6 +3,7 @@ package vshard_router //nolint:revive
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -262,8 +263,7 @@ func (r *Router) RouterMapCallRWImpl(
 	timeout := opts.Timeout
 	timeStart := time.Now()
 
-	refID := r.refID.Load()
-	r.refID.Add(1)
+	refID := r.refID.Add(1)
 
 	idToReplicasetRef := r.getIDToReplicaset()
 
@@ -342,7 +342,7 @@ func (r *Router) RouterMapCallRWImpl(
 					return vshardErr
 				}
 
-				var bucketCount uint16
+				var bucketCount int32
 				err = future.GetTyped(&[]interface{}{&bucketCount})
 				if err != nil {
 					cancel()
@@ -350,7 +350,7 @@ func (r *Router) RouterMapCallRWImpl(
 					return err
 				}
 
-				atomic.AddInt32(&totalBucketCount, int32(bucketCount))
+				atomic.AddInt32(&totalBucketCount, bucketCount)
 			}
 
 			return nil
@@ -399,6 +399,7 @@ func (r *Router) RouterMapCallRWImpl(
 
 	// map stage: collect
 
+	var idToResultMutex sync.Mutex
 	idToResult := make(map[uuid.UUID]interface{})
 
 	for i := 0; i < int(r.nWorkers); i++ {
@@ -457,7 +458,9 @@ func (r *Router) RouterMapCallRWImpl(
 					return err
 				}
 
+				idToResultMutex.Lock()
 				idToResult[rsFuture.id] = respData[1]
+				idToResultMutex.Unlock()
 			}
 
 			return nil
