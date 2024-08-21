@@ -12,6 +12,8 @@ BUG FIXES:
 * RouterMapCallRWImpl: decode bucketCount into 32 bit integer instead of 16 bit
 * RouterMapCallRWImpl: fix concurrent access to idToResult map
 * BucketDiscovery: fix possible concurrent access to resultRs and err vars
+* RouterMapCallRWImpl: compare totalBucketCount against r.cfg.TotalBucketCount
+* issue #39: fixed concurrent access to routeMap: use consistent view (immutable object) + atomics
 
 FEATURES:
 

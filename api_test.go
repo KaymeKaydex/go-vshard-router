@@ -3,6 +3,7 @@ package vshard_router // nolint: revive
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -50,7 +51,9 @@ func TestRouter_RouterCallImpl(t *testing.T) {
 				Logger:           &EmptyLogger{},
 				Metrics:          &EmptyMetrics{},
 			},
-			routeMap: make([]*Replicaset, 11),
+			view: &consistentView{
+				routeMap: make([]atomic.Pointer[Replicaset], 11),
+			},
 		}
 
 		futureError := fmt.Errorf("testErr")
@@ -60,9 +63,9 @@ func TestRouter_RouterCallImpl(t *testing.T) {
 		mPool := mockpool.NewPool(t)
 		mPool.On("Do", mock.Anything, mock.Anything).Return(errFuture)
 
-		r.routeMap[5] = &Replicaset{
+		r.view.routeMap[5].Store(&Replicaset{
 			conn: mPool,
-		}
+		})
 
 		_, _, err := r.RouterCallImpl(ctx, 5, CallOpts{Timeout: time.Second}, "test", []byte("test"))
 		require.ErrorIs(t, futureError, err)
