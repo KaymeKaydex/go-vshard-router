@@ -2,9 +2,10 @@
 
 <img align="right" width="159px" src="docs/static/logo.png" alt="go vshard router logo">
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/KaymeKaydex/go-vshard-router.svg)](https://pkg.go.dev/github.com/KaymeKaydex/go-vshard-router)
+[![Actions Status][actions-badge]][actions-url]
 [![Go Report Card](https://goreportcard.com/badge/github.com/KaymeKaydex/go-vshard-router)](https://goreportcard.com/report/github.com/KaymeKaydex/go-vshard-router)
 [![codecov](https://codecov.io/gh/KaymeKaydex/go-vshard-router/graph/badge.svg?token=WLRWE97IT1)](https://codecov.io/gh/KaymeKaydex/go-vshard-router)
-[![Go Reference](https://pkg.go.dev/badge/github.com/KaymeKaydex/go-vshard-router.svg)](https://pkg.go.dev/github.com/KaymeKaydex/go-vshard-router)
 
 Translations:
 - [English](https://github.com/KaymeKaydex/go-vshard-router/blob/main/README.md)
@@ -203,3 +204,7 @@ func main() {
   ![Image alt](docs/static/direct.png)
 - tarantool-router: (80% cpu, heavy rps kills proxy at 100% cpu)
   ![Image alt](docs/static/not-direct.png)
+
+
+[actions-badge]: https://github.com/KaymeKaydex/go-vshard-router/actions/workflows/main.yml/badge.svg
+[actions-url]: https://github.com/KaymeKaydex/go-vshard-router/actions/workflows/main.yml
