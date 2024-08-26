@@ -13,3 +13,6 @@
 
 # Go output
 *.out
+
+# Tmp
+*.tmp

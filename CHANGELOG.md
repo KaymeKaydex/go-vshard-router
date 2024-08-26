@@ -17,6 +17,7 @@ REFACTOR:
 
 * Refactored docs (add QuickStart doc) and that library base on vhsard router
 * Several linters are enabled because they are usefull
+* Ignore .tmp files
 
 
 

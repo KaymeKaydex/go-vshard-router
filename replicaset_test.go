@@ -57,20 +57,9 @@ func TestReplicaset_BucketStat(t *testing.T) {
 		require.Equal(t, futureError, err)
 	})
 
-	t.Run("wrong bucket", func(t *testing.T) {
+	t.Run("unsupported or broken proto resp", func(t *testing.T) {
 		f := tarantool.NewFuture(tarantool.NewCallRequest("vshard.storage.bucket_stat"))
-		/*
-			unix/:./data/storage_1_a.control> vshard.storage.bucket_stat(1000)
-			---
-			- null
-			- bucket_id: 1000
-			  reason: Not found
-			  code: 1
-			  type: ShardingError
-			  message: 'Cannot perform action with bucket 1000, reason: Not found'
-			  name: WRONG_BUCKET
-			...
-		*/
+
 		bts, _ := msgpack.Marshal([]interface{}{1})
 
 		err := f.SetResponse(tarantool.Header{}, bytes.NewReader(bts))
@@ -81,8 +70,24 @@ func TestReplicaset_BucketStat(t *testing.T) {
 		rs.conn = mPool
 
 		// todo: add real tests
-		require.Panics(t, func() {
-			_, err = rs.BucketStat(ctx, 123)
-		})
+
+		statInfo, err := rs.BucketStat(ctx, 123)
+		require.Error(t, err)
+		require.Equal(t, statInfo, BucketStatInfo{BucketID: 0, Status: ""})
 	})
+
+	/*
+		TODO: add test for wrong bucket response
+
+		unix/:./data/storage_1_a.control> vshard.storage.bucket_stat(1000)
+		---
+		- null
+		- bucket_id: 1000
+		  reason: Not found
+		  code: 1
+		  type: ShardingError
+		  message: 'Cannot perform action with bucket 1000, reason: Not found'
+		  name: WRONG_BUCKET
+		...
+	*/
 }

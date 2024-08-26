@@ -53,7 +53,7 @@ func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketSt
 	}
 
 	if len(respData) < 1 {
-		return bsInfo, fmt.Errorf("respData len is 0 for %s", bucketStatFnc)
+		return bsInfo, fmt.Errorf("respData len is 0 for %s; unsupported or broken proto", bucketStatFnc)
 	}
 
 	if respData[0] == nil {
