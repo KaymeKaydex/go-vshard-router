@@ -124,8 +124,8 @@ func TestConncurrentTopologyChange(t *testing.T) {
 		DiscoveryTimeout: 5 * time.Second,
 		DiscoveryMode:    vshardrouter.DiscoveryModeOn,
 		TotalBucketCount: totalBucketCount,
-		User:             "storage",
-		Password:         "storage",
+		User:             defaultTntUser,
+		Password:         defaultTntPassword,
 	})
 	if err != nil {
 		panic(err)
