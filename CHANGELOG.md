@@ -12,12 +12,14 @@ FEATURES:
 
 * Added etcd v2 topology provider implementation (#16)
 * Add TopologyController mock for testing improve
+* Add linter job (#33)
 
 REFACTOR:
 
 * Refactored docs (add QuickStart doc) and that library base on vhsard router
 * Several linters are enabled because they are usefull
 * Ignore .tmp files
+* Refactored provider creation test caused by golang-ci lint (#33)
 
 
 

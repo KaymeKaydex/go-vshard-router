@@ -29,3 +29,24 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         slug: KaymeKaydex/go-vshard-router
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v2
+
+      - uses: actions/checkout@v2
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        continue-on-error: true
+        with:
+          # The first run is for GitHub Actions error format.
+          args: --config=.golangci.yaml
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          # The second run is for human-readable error format with a file name
+          # and a line number.
+          args: --out-${NO_FUTURE}format colored-line-number --config=.golangci.yaml
