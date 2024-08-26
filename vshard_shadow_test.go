@@ -24,7 +24,7 @@ func TestNewRouter_InvalidReplicasetUUID(t *testing.T) {
 
 	router, err := vshard_router.NewRouter(ctx, vshard_router.Config{
 		TopologyProvider: static.NewProvider(map[vshard_router.ReplicasetInfo][]vshard_router.InstanceInfo{
-			vshard_router.ReplicasetInfo{ //nolint: gofmt
+			{
 				Name: "123",
 			}: {
 				{Addr: "first.internal:1212"},
@@ -41,7 +41,7 @@ func TestNewRouter_InstanceAddr(t *testing.T) {
 
 	router, err := vshard_router.NewRouter(ctx, vshard_router.Config{
 		TopologyProvider: static.NewProvider(map[vshard_router.ReplicasetInfo][]vshard_router.InstanceInfo{
-			vshard_router.ReplicasetInfo{ //nolint: gofmt
+			{
 				Name: "123",
 				UUID: uuid.New(),
 			}: {

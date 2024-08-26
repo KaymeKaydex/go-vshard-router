@@ -38,11 +38,11 @@ func (rs *Replicaset) String() string {
 }
 
 func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
-	const fnc = "vshard.storage.bucket_stat"
+	const bucketStatFnc = "vshard.storage.bucket_stat"
 
 	var bsInfo BucketStatInfo
 
-	req := tarantool.NewCallRequest(fnc).
+	req := tarantool.NewCallRequest(bucketStatFnc).
 		Args([]interface{}{bucketID}).
 		Context(ctx)
 
@@ -53,13 +53,13 @@ func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketSt
 	}
 
 	if len(respData) < 1 {
-		return bsInfo, fmt.Errorf("respData len is 0 for %s", fnc)
+		return bsInfo, fmt.Errorf("respData len is 0 for %s", bucketStatFnc)
 	}
 
 	if respData[0] == nil {
 
 		if len(respData) < 2 {
-			return bsInfo, fmt.Errorf("respData len < 2 when respData[0] is nil for %s", fnc)
+			return bsInfo, fmt.Errorf("respData len < 2 when respData[0] is nil for %s", bucketStatFnc)
 		}
 
 		var tmp interface{} // todo: fix non-panic crutch
@@ -73,7 +73,7 @@ func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketSt
 		return bsInfo, bsError
 	}
 
-	// fucking key-code 1
+	// A problem with key-code 1
 	// todo: fix after https://github.com/tarantool/go-tarantool/issues/368
 	err = mapstructure.Decode(respData[0], bsInfo)
 	if err != nil {

@@ -238,10 +238,12 @@ func (r *Router) RouterBucketIDStrCRC32(shardKey string) uint64 {
 	return BucketIDStrCRC32(shardKey, r.cfg.TotalBucketCount)
 }
 
-// RouterBucketIDMPCRC32 is not supported now
-//
-//nolint:revive
-func RouterBucketIDMPCRC32(total uint64, keys ...string) {}
+// RouterBucketIDMPCRC32 is not implemented yet
+func RouterBucketIDMPCRC32(total uint64, keys ...string) {
+	// todo: implement
+	_, _ = total, keys
+	panic("RouterBucketIDMPCRC32 is not implemented yet")
+}
 
 func (r *Router) RouterBucketCount() uint64 {
 	return r.cfg.TotalBucketCount
