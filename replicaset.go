@@ -1,4 +1,4 @@
-package vshard_router
+package vshard_router //nolint:revive
 
 import (
 	"context"
@@ -38,36 +38,49 @@ func (rs *Replicaset) String() string {
 }
 
 func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
-	bsInfo := &BucketStatInfo{}
-	bsError := &BucketStatError{}
+	const bucketStatFnc = "vshard.storage.bucket_stat"
 
-	req := tarantool.NewCallRequest("vshard.storage.bucket_stat").
+	var bsInfo BucketStatInfo
+
+	req := tarantool.NewCallRequest(bucketStatFnc).
 		Args([]interface{}{bucketID}).
 		Context(ctx)
 
 	future := rs.conn.Do(req, pool.RO)
 	respData, err := future.Get()
 	if err != nil {
-		return BucketStatInfo{}, err
+		return bsInfo, err
 	}
 
-	var tmp interface{} // todo: fix non-panic crutch
+	if len(respData) < 1 {
+		return bsInfo, fmt.Errorf("respData len is 0 for %s", bucketStatFnc)
+	}
 
 	if respData[0] == nil {
+
+		if len(respData) < 2 {
+			return bsInfo, fmt.Errorf("respData len < 2 when respData[0] is nil for %s", bucketStatFnc)
+		}
+
+		var tmp interface{} // todo: fix non-panic crutch
+		bsError := &BucketStatError{}
+
 		err := future.GetTyped(&[]interface{}{tmp, bsError})
 		if err != nil {
-			return BucketStatInfo{}, err
+			return bsInfo, err
 		}
-	} else {
-		// fucking key-code 1
-		// todo: fix after https://github.com/tarantool/go-tarantool/issues/368
-		err := mapstructure.Decode(respData[0], bsInfo)
-		if err != nil {
-			return BucketStatInfo{}, err
-		}
+
+		return bsInfo, bsError
 	}
 
-	return *bsInfo, bsError
+	// A problem with key-code 1
+	// todo: fix after https://github.com/tarantool/go-tarantool/issues/368
+	err = mapstructure.Decode(respData[0], bsInfo)
+	if err != nil {
+		return bsInfo, fmt.Errorf("can't decode bsInfo: %w", err)
+	}
+
+	return bsInfo, nil
 }
 
 // ReplicaCall perform function on remote storage

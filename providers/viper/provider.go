@@ -108,9 +108,7 @@ func (p *Provider) Init(c vshardrouter.TopologyController) error {
 	return c.AddReplicasets(context.TODO(), p.rs)
 }
 
-func (p *Provider) Close() {
-	return
-}
+func (p *Provider) Close() {}
 
 type ClusterInfo struct {
 	ReplicasetUUID string `yaml:"replicaset_uuid" mapstructure:"replicaset_uuid"`

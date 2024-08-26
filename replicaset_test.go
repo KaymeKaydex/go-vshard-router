@@ -1,4 +1,4 @@
-package vshard_router
+package vshard_router //nolint:revive
 
 import (
 	"bytes"

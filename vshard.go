@@ -1,4 +1,4 @@
-package vshard_router
+package vshard_router //nolint:revive
 
 import (
 	"context"
@@ -92,7 +92,7 @@ func (ii InstanceInfo) Validate() error {
 func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	var err error
 
-	cfg, err = prepareCfg(ctx, cfg)
+	cfg, err = prepareCfg(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func (r *Router) RouteMapClean() {
 	}
 }
 
-func prepareCfg(ctx context.Context, cfg Config) (Config, error) {
+func prepareCfg(cfg Config) (Config, error) {
 	err := validateCfg(cfg)
 	if err != nil {
 		return Config{}, fmt.Errorf("%v: %v", ErrInvalidConfig, err)
@@ -238,8 +238,12 @@ func (r *Router) RouterBucketIDStrCRC32(shardKey string) uint64 {
 	return BucketIDStrCRC32(shardKey, r.cfg.TotalBucketCount)
 }
 
-// RouterBucketIDMPCRC32 is not supported now
-func RouterBucketIDMPCRC32(total uint64, keys ...string) {}
+// RouterBucketIDMPCRC32 is not implemented yet
+func RouterBucketIDMPCRC32(total uint64, keys ...string) {
+	// todo: implement
+	_, _ = total, keys
+	panic("RouterBucketIDMPCRC32 is not implemented yet")
+}
 
 func (r *Router) RouterBucketCount() uint64 {
 	return r.cfg.TotalBucketCount

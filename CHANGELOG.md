@@ -4,6 +4,9 @@ BUG FIXES:
 
 * RouterCallImpl: fix decoding the response from vshard.storage.call
 * RouterCallImpl: do not return nil error when StorageCallAssertError has happened
+* BucketStat: always returns non-nil err, fixed
+* DiscoveryAllBuckets returns nil even if errGr.Wait() returns err, fixed
+* DiscoveryHandleBuckets: misusage of atomics, fixed
 
 FEATURES:
 
@@ -13,6 +16,7 @@ FEATURES:
 REFACTOR:
 
 * Refactored docs (add QuickStart doc) and that library base on vhsard router
+* Several linters are enabled because they are usefull
 
 
 

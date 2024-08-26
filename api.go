@@ -1,4 +1,4 @@
-package vshard_router
+package vshard_router //nolint:revive
 
 import (
 	"context"
@@ -64,6 +64,10 @@ type CallOpts struct {
 	Timeout    time.Duration
 }
 
+// revive warns us: time-naming: var CallTimeoutMin is of type time.Duration; don't use unit-specific suffix "Min".
+// But the original lua vshard implementation uses this naming, so we use it too.
+//
+//nolint:revive
 const CallTimeoutMin = time.Second / 2
 
 // RouterCallImpl Perform shard operation function will restart operation
