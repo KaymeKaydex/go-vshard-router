@@ -1,5 +1,10 @@
 ## Unreleased
 
+BUG FIXES:
+
+* RouterCallImpl: fix decoding the response from vshard.storage.call
+* RouterCallImpl: do not return nil error when StorageCallAssertError has happened
+
 FEATURES:
 
 * Added etcd v2 topology provider implementation (#16)

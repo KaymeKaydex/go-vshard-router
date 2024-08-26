@@ -190,15 +190,20 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		if !isVShardRespOk { // error
 			errorResp := &StorageCallAssertError{}
 
+			// Since we got respData[0] == false, it means that assert has happened
+			// while executing user-defined function on vshard storage.
+			// In this case, vshard storage must return a pair: false, error.
 			if len(respData) < 2 {
-				err = fmt.Errorf("unexpected response length when respData[0] == nil: %d", len(respData))
+				err = fmt.Errorf("protocol violation: unexpected response length when respData[0] == false: %d", len(respData))
 			} else {
 				err = future.GetTyped(&[]interface{}{&isVShardRespOk, errorResp})
 			}
 
 			if err != nil {
+				// Either protocol has been violated or decoding has failed.
 				err = fmt.Errorf("cant get typed vshard err with err: %s", err)
 			} else {
+				// StorageCallAssertError successfully has been decoded.
 				err = errorResp
 			}
 
