@@ -26,7 +26,8 @@ func TestNewProvider(t *testing.T) {
 
 	for _, tc := range tCases {
 		t.Run("provider", func(t *testing.T) {
-			if tc.Source == nil || len(tc.Source) == 0 {
+			if len(tc.Source) == 0 {
+
 				require.Panics(t, func() {
 					NewProvider(tc.Source)
 				})
