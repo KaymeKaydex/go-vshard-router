@@ -37,7 +37,7 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 
 	// it`s ok if in the same time we have few active searches
 	// mu per bucket is expansive
-	r.cfg.Logger.Info(ctx, fmt.Sprintf("Discovering bucket %d", bucketID))
+	r.log().Infof(ctx, "Discovering bucket %d", bucketID)
 
 	idToReplicasetRef := r.getIDToReplicaset()
 
@@ -137,20 +137,20 @@ func (r *Router) DiscoveryHandleBuckets(ctx context.Context, rs *Replicaset, buc
 	}
 
 	if count != rs.bucketCount.Load() {
-		r.cfg.Logger.Info(ctx, fmt.Sprintf("Updated %s buckets: was %d, became %d", rs.info.Name, rs.bucketCount.Load(), count))
+		r.log().Infof(ctx, "Updated %s buckets: was %d, became %d", rs.info.Name, rs.bucketCount.Load(), count)
 	}
 
 	rs.bucketCount.Store(count)
 
 	for rs, oldBucketCount := range affected {
-		r.log().Info(ctx, fmt.Sprintf("Affected buckets of %s: was %d, became %d", rs.info.Name, oldBucketCount, rs.bucketCount.Load()))
+		r.log().Infof(ctx, "Affected buckets of %s: was %d, became %d", rs.info.Name, oldBucketCount, rs.bucketCount.Load())
 	}
 }
 
 func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	t := time.Now()
 
-	r.log().Info(ctx, "start discovery all buckets")
+	r.log().Infof(ctx, "start discovery all buckets")
 
 	errGr, ctx := errgroup.WithContext(ctx)
 
@@ -208,7 +208,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("errGr.Wait() err: %w", err)
 	}
-	r.log().Info(ctx, fmt.Sprintf("discovery done since: %s", time.Since(t)))
+	r.log().Infof(ctx, "discovery done since: %s", time.Since(t))
 
 	return nil
 }
@@ -222,19 +222,19 @@ func (r *Router) startCronDiscovery(ctx context.Context) error {
 
 			return ctx.Err()
 		case <-time.After(r.cfg.DiscoveryTimeout):
-			r.log().Debug(ctx, "started new cron discovery")
+			r.log().Debugf(ctx, "started new cron discovery")
 
 			tStartDiscovery := time.Now()
 
 			defer func() {
-				r.log().Info(ctx, fmt.Sprintf("discovery done since %s", time.Since(tStartDiscovery)))
+				r.log().Infof(ctx, "discovery done since %s", time.Since(tStartDiscovery))
 			}()
 
 			err := r.DiscoveryAllBuckets(ctx)
 			if err != nil {
 				r.metrics().CronDiscoveryEvent(false, time.Since(tStartDiscovery), "discovery-error")
 
-				r.log().Error(ctx, fmt.Sprintf("cant do cron discovery with error: %s", err))
+				r.log().Errorf(ctx, "cant do cron discovery with error: %s", err)
 			}
 
 			r.metrics().CronDiscoveryEvent(true, time.Since(tStartDiscovery), "ok")

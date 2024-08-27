@@ -14,7 +14,7 @@ func TestRouter_BucketResolve_InvalidBucketID(t *testing.T) {
 	r := Router{
 		cfg: Config{
 			TotalBucketCount: uint64(10),
-			Logger:           &EmptyLogger{},
+			Loggerf:          emptyLogfProvider,
 		},
 		view: &consistentView{
 			routeMap: make([]atomic.Pointer[Replicaset], 11),

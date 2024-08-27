@@ -65,8 +65,9 @@ type Router struct {
 func (r *Router) metrics() MetricsProvider {
 	return r.cfg.Metrics
 }
-func (r *Router) log() LogProvider {
-	return r.cfg.Logger
+
+func (r *Router) log() LogfProvider {
+	return r.cfg.Loggerf
 }
 
 func (r *Router) getConsistentView() *consistentView {
@@ -85,7 +86,8 @@ func (r *Router) setConsistentView(view *consistentView) {
 
 type Config struct {
 	// Providers
-	Logger           LogProvider      // Logger is not required
+	Logger           LogProvider      // Logger is not required, legacy interface
+	Loggerf          LogfProvider     // Loggerf is not required, new interface
 	Metrics          MetricsProvider  // Metrics is not required
 	TopologyProvider TopologyProvider // TopologyProvider is required provider
 
@@ -147,7 +149,7 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 
 	err = cfg.TopologyProvider.Init(router.Topology())
 	if err != nil {
-		router.log().Error(ctx, fmt.Sprintf("cant create new topology provider with err: %s", err))
+		router.log().Errorf(ctx, "cant create new topology provider with err: %s", err)
 
 		return nil, fmt.Errorf("%w; cant init topology with err: %w", ErrTopologyProvider, err)
 	}
@@ -163,7 +165,7 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 		go func() {
 			discoveryErr := router.startCronDiscovery(discoveryCronCtx)
 			if discoveryErr != nil {
-				router.log().Error(ctx, fmt.Sprintf("error when run cron discovery: %s", discoveryErr))
+				router.log().Errorf(ctx, "error when run cron discovery: %s", discoveryErr)
 			}
 		}()
 
@@ -230,12 +232,16 @@ func prepareCfg(cfg Config) (Config, error) {
 		return Config{}, fmt.Errorf("%v: %v", ErrInvalidConfig, err)
 	}
 
-	if cfg.Logger == nil {
-		cfg.Logger = &EmptyLogger{}
+	if cfg.Loggerf == nil {
+		if cfg.Logger != nil {
+			cfg.Loggerf = &legacyLoggerProxy{l: cfg.Logger}
+		} else {
+			cfg.Loggerf = emptyLogfProvider
+		}
 	}
 
 	if cfg.Metrics == nil {
-		cfg.Metrics = &EmptyMetrics{}
+		cfg.Metrics = emptyMetricsProvider
 	}
 
 	return cfg, nil

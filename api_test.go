@@ -16,8 +16,8 @@ import (
 var emptyRouter = &Router{
 	cfg: Config{
 		TotalBucketCount: uint64(10),
-		Logger:           &EmptyLogger{},
-		Metrics:          &EmptyMetrics{},
+		Loggerf:          emptyLogfProvider,
+		Metrics:          emptyMetricsProvider,
 	},
 }
 
@@ -48,8 +48,8 @@ func TestRouter_RouterCallImpl(t *testing.T) {
 		r := &Router{
 			cfg: Config{
 				TotalBucketCount: uint64(10),
-				Logger:           &EmptyLogger{},
-				Metrics:          &EmptyMetrics{},
+				Loggerf:          emptyLogfProvider,
+				Metrics:          emptyMetricsProvider,
 			},
 			view: &consistentView{
 				routeMap: make([]atomic.Pointer[Replicaset], 11),

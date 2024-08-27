@@ -1,9 +1,14 @@
 ## Unreleased
 
+FEATURES:
+
+* Support new Sprintf-like logging interface (#48)
+
 REFACTOR:
 
 * resolve issue #38: simplify DiscoveryAllBuckets and remove suspicious if
 * resolve issue #46: drastically simplify RouterMapCallRWImpl and added tests with real tnt
+* Use typed nil pointers instead of memory allocation for EmptyMetrics and emptyLogger structs
 
 ## 0.0.12
 
