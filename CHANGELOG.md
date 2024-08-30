@@ -23,7 +23,7 @@ REFACTOR:
 * Refactored provider creation test caused by golang-ci lint (#33)
 * Router implements directly TopologyController, no proxy object is used now
 * Makefile refactored for racetests
-* Tests coverage up 22% -> 28%
+* Tests coverage up 22% -> 33%
 
 
 ## 0.0.11
