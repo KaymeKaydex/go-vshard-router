@@ -229,11 +229,11 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 }
 
 // call function "storage_unref" if map_callrw is failed or successed
-func (r *Router) callStorageUnref(refID int64) {
+func (r *Router) callStorageUnref(idToReplicasetRef map[uuid.UUID]*Replicaset, refID int64) {
 	req := tarantool.NewCallRequest("vshard.storage._call")
 	req = req.Args([]interface{}{"storage_unref", refID})
 
-	for _, replicaset := range r.idToReplicaset {
+	for _, replicaset := range idToReplicasetRef {
 		conn := replicaset.conn
 
 		future := conn.Do(req, pool.RW)
@@ -265,7 +265,9 @@ func (r *Router) RouterMapCallRWImpl(
 	refID := r.refID.Load()
 	r.refID.Add(1)
 
-	defer r.callStorageUnref(refID)
+	idToReplicasetRef := r.getIDToReplicaset()
+
+	defer r.callStorageUnref(idToReplicasetRef, refID)
 
 	mapCallCtx, cancel := context.WithTimeout(ctx, timeout)
 
@@ -286,7 +288,7 @@ func (r *Router) RouterMapCallRWImpl(
 	g.Go(func() error {
 		defer close(rsFutures)
 
-		for id, replicaset := range r.idToReplicaset {
+		for id, replicaset := range idToReplicasetRef {
 			conn := replicaset.conn
 
 			future := conn.Do(req, pool.RW)
@@ -372,7 +374,7 @@ func (r *Router) RouterMapCallRWImpl(
 	g.Go(func() error {
 		defer close(rsFutures)
 
-		for id, replicaset := range r.idToReplicaset {
+		for id, replicaset := range idToReplicasetRef {
 			conn := replicaset.conn
 
 			future := conn.Do(req, pool.RW)
@@ -479,5 +481,14 @@ func (r *Router) RouterRoute(ctx context.Context, bucketID uint64) (*Replicaset,
 
 // RouterRouteAll return map of all replicasets.
 func (r *Router) RouterRouteAll() map[uuid.UUID]*Replicaset {
-	return r.idToReplicaset
+	idToReplicasetRef := r.getIDToReplicaset()
+
+	// Do not expose the original map to prevent unauthorized modification.
+	idToReplicasetCopy := make(map[uuid.UUID]*Replicaset)
+
+	for k, v := range idToReplicasetRef {
+		idToReplicasetCopy[k] = v
+	}
+
+	return idToReplicasetCopy
 }

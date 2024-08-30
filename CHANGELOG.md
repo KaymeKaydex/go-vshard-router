@@ -7,6 +7,7 @@ BUG FIXES:
 * BucketStat: always returns non-nil err, fixed
 * DiscoveryAllBuckets returns nil even if errGr.Wait() returns err, fixed
 * DiscoveryHandleBuckets: misusage of atomics, fixed
+* race when accessing to idToReplicaset, fixed: idToReplicaset is immutable object now
 
 FEATURES:
 
@@ -20,6 +21,7 @@ REFACTOR:
 * Several linters are enabled because they are usefull
 * Ignore .tmp files
 * Refactored provider creation test caused by golang-ci lint (#33)
+* Router implements directly TopologyController, no proxy object is used now
 
 
 
