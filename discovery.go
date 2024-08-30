@@ -103,6 +103,10 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 
 // BucketResolve resolve bucket id to replicaset
 func (r *Router) BucketResolve(ctx context.Context, bucketID uint64) (*Replicaset, error) {
+	if bucketID > r.cfg.TotalBucketCount {
+		return nil, fmt.Errorf("bucket id is out of range: %d (total %d)", bucketID, r.cfg.TotalBucketCount)
+	}
+
 	rs := r.routeMap[bucketID]
 	if rs != nil {
 		return rs, nil

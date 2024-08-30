@@ -16,6 +16,7 @@ import (
 var (
 	ErrInvalidConfig       = fmt.Errorf("config invalid")
 	ErrInvalidInstanceInfo = fmt.Errorf("invalid instance info")
+	ErrTopologyProvider    = fmt.Errorf("got error from topology provider")
 )
 
 type Router struct {
@@ -120,7 +121,7 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	if err != nil {
 		router.log().Error(ctx, fmt.Sprintf("cant create new topology provider with err: %s", err))
 
-		return nil, err
+		return nil, fmt.Errorf("%w; cant init topology with err: %w", ErrTopologyProvider, err)
 	}
 
 	err = router.DiscoveryAllBuckets(ctx)

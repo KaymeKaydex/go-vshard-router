@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	mockpool "github.com/KaymeKaydex/go-vshard-router/mocks/pool"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -56,13 +57,40 @@ func TestController_RemoveInstance(t *testing.T) {
 func TestController_RemoveReplicaset(t *testing.T) {
 	ctx := context.Background()
 
+	uuidToRemove := uuid.New()
+	mPool := mockpool.NewPool(t)
+	mPool.On("CloseGraceful").Return(nil)
+
+	router := Router{
+		idToReplicaset: map[uuid.UUID]*Replicaset{
+			uuidToRemove: {conn: mPool},
+		},
+	}
+
 	t.Run("no such replicaset", func(t *testing.T) {
-		router := Router{
-			idToReplicaset: map[uuid.UUID]*Replicaset{},
-		}
-
+		t.Parallel()
 		errs := router.Topology().RemoveReplicaset(ctx, uuid.New())
-
 		require.True(t, errors.Is(errs[0], ErrReplicasetNotExists))
 	})
+	t.Run("successfully remove", func(t *testing.T) {
+		t.Parallel()
+		errs := router.Topology().RemoveReplicaset(ctx, uuidToRemove)
+		require.Empty(t, errs)
+	})
+}
+
+func TestRouter_AddReplicaset_AlreadyExists(t *testing.T) {
+	ctx := context.TODO()
+
+	alreadyExistingRsUUID := uuid.New()
+
+	router := Router{
+		idToReplicaset: map[uuid.UUID]*Replicaset{
+			alreadyExistingRsUUID: {},
+		},
+	}
+
+	// Test that such replicaset already exists
+	err := router.AddReplicaset(ctx, ReplicasetInfo{UUID: alreadyExistingRsUUID}, []InstanceInfo{})
+	require.Equalf(t, ErrReplicasetExists, err, "such replicaset must already exists")
 }

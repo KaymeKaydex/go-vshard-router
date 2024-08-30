@@ -1,6 +1,7 @@
 package vshard_router //nolint:revive
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -33,4 +34,19 @@ func TestSearchLock_WaitOnSearch(t *testing.T) {
 	lock.WaitOnSearch(3)
 
 	require.True(t, time.Since(lockStart) < 12*time.Millisecond && time.Since(lockStart) > 9*time.Millisecond)
+}
+
+func TestRouter_BucketResolve_InvalidBucketID(t *testing.T) {
+	ctx := context.TODO()
+
+	r := Router{
+		cfg: Config{
+			TotalBucketCount: uint64(10),
+			Logger:           &EmptyLogger{},
+		},
+		routeMap: make([]*Replicaset, 11),
+	}
+
+	_, err := r.BucketResolve(ctx, 20)
+	require.Error(t, err)
 }
