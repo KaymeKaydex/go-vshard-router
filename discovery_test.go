@@ -36,20 +36,6 @@ func TestSearchLock_WaitOnSearch(t *testing.T) {
 	require.True(t, time.Since(lockStart) < 12*time.Millisecond && time.Since(lockStart) > 9*time.Millisecond)
 }
 
-func TestRouter_DiscoveryAllBuckets(t *testing.T) {
-	ctx := context.TODO()
-
-	r := Router{
-		cfg: Config{
-			TotalBucketCount: uint64(256000),
-			Logger:           &EmptyLogger{},
-		},
-	}
-
-	err := r.DiscoveryAllBuckets(ctx)
-	require.Error(t, err) // replicaset map is empty
-}
-
 func TestRouter_BucketResolve_InvalidBucketID(t *testing.T) {
 	ctx := context.TODO()
 

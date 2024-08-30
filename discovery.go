@@ -171,9 +171,6 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	errGr, ctx := errgroup.WithContext(ctx)
 
 	idToReplicasetRef := r.getIDToReplicaset()
-	if idToReplicasetRef == nil {
-		return fmt.Errorf("smth went wrong; replicasets map is empty")
-	}
 
 	for _, rs := range idToReplicasetRef {
 		rs := rs

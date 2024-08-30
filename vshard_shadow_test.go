@@ -12,21 +12,18 @@ import (
 	"github.com/KaymeKaydex/go-vshard-router/providers/static"
 )
 
-// Check that ErrorTopologyProvider implements TopologyProvider interface
-var _ vshardrouter.TopologyProvider = (*ErrorTopologyProvider)(nil)
+type errorTopologyProvider struct{}
 
-type ErrorTopologyProvider struct{}
-
-func (e *ErrorTopologyProvider) Init(_ vshardrouter.TopologyController) error {
+func (e *errorTopologyProvider) Init(_ vshardrouter.TopologyController) error {
 	return fmt.Errorf("test error")
 }
-func (e *ErrorTopologyProvider) Close() {}
+func (e *errorTopologyProvider) Close() {}
 
 func TestNewRouter_ProviderError(t *testing.T) {
 	ctx := context.TODO()
 	_, err := vshardrouter.NewRouter(ctx, vshardrouter.Config{
 		TotalBucketCount: 256000,
-		TopologyProvider: &ErrorTopologyProvider{},
+		TopologyProvider: &errorTopologyProvider{},
 	})
 
 	require.ErrorIs(t, err, vshardrouter.ErrTopologyProvider)
