@@ -2,19 +2,40 @@ package vshard_router_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	vshard_router "github.com/KaymeKaydex/go-vshard-router"
+	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
 	"github.com/KaymeKaydex/go-vshard-router/providers/static"
 )
+
+// Check that ErrorTopologyProvider implements TopologyProvider interface
+var _ vshardrouter.TopologyProvider = (*ErrorTopologyProvider)(nil)
+
+type ErrorTopologyProvider struct{}
+
+func (e *ErrorTopologyProvider) Init(_ vshardrouter.TopologyController) error {
+	return fmt.Errorf("test error")
+}
+func (e *ErrorTopologyProvider) Close() {}
+
+func TestNewRouter_ProviderError(t *testing.T) {
+	ctx := context.TODO()
+	_, err := vshardrouter.NewRouter(ctx, vshardrouter.Config{
+		TotalBucketCount: 256000,
+		TopologyProvider: &ErrorTopologyProvider{},
+	})
+
+	require.ErrorIs(t, err, vshardrouter.ErrTopologyProvider)
+}
 
 func TestNewRouter_EmptyReplicasets(t *testing.T) {
 	ctx := context.TODO()
 
-	router, err := vshard_router.NewRouter(ctx, vshard_router.Config{})
+	router, err := vshardrouter.NewRouter(ctx, vshardrouter.Config{})
 	require.Error(t, err)
 	require.Nil(t, router)
 }
@@ -22,8 +43,8 @@ func TestNewRouter_EmptyReplicasets(t *testing.T) {
 func TestNewRouter_InvalidReplicasetUUID(t *testing.T) {
 	ctx := context.TODO()
 
-	router, err := vshard_router.NewRouter(ctx, vshard_router.Config{
-		TopologyProvider: static.NewProvider(map[vshard_router.ReplicasetInfo][]vshard_router.InstanceInfo{
+	router, err := vshardrouter.NewRouter(ctx, vshardrouter.Config{
+		TopologyProvider: static.NewProvider(map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
 			{
 				Name: "123",
 			}: {
@@ -39,8 +60,8 @@ func TestNewRouter_InvalidReplicasetUUID(t *testing.T) {
 func TestNewRouter_InstanceAddr(t *testing.T) {
 	ctx := context.TODO()
 
-	router, err := vshard_router.NewRouter(ctx, vshard_router.Config{
-		TopologyProvider: static.NewProvider(map[vshard_router.ReplicasetInfo][]vshard_router.InstanceInfo{
+	router, err := vshardrouter.NewRouter(ctx, vshardrouter.Config{
+		TopologyProvider: static.NewProvider(map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{
 			{
 				Name: "123",
 				UUID: uuid.New(),
@@ -56,40 +77,40 @@ func TestNewRouter_InstanceAddr(t *testing.T) {
 
 func TestRouterBucketIDStrCRC32(t *testing.T) {
 	// required values from tarantool example
-	require.Equal(t, uint64(103202), vshard_router.BucketIDStrCRC32("2707623829", uint64(256000)))
-	require.Equal(t, uint64(35415), vshard_router.BucketIDStrCRC32("2706201716", uint64(256000)))
+	require.Equal(t, uint64(103202), vshardrouter.BucketIDStrCRC32("2707623829", uint64(256000)))
+	require.Equal(t, uint64(35415), vshardrouter.BucketIDStrCRC32("2706201716", uint64(256000)))
 }
 
 func BenchmarkRouterBucketIDStrCRC32(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		vshard_router.BucketIDStrCRC32("test_bench_key", uint64(256000))
+		vshardrouter.BucketIDStrCRC32("test_bench_key", uint64(256000))
 	}
 }
 
 func TestInstanceInfo_Validate(t *testing.T) {
 	tCases := []struct {
 		Name  string
-		II    vshard_router.InstanceInfo
+		II    vshardrouter.InstanceInfo
 		Valid bool
 	}{
 		{
 			Name:  "no info",
-			II:    vshard_router.InstanceInfo{},
+			II:    vshardrouter.InstanceInfo{},
 			Valid: false,
 		},
 		{
 			Name:  "no uuid",
-			II:    vshard_router.InstanceInfo{Addr: "first.internal:1212"},
+			II:    vshardrouter.InstanceInfo{Addr: "first.internal:1212"},
 			Valid: false,
 		},
 		{
 			Name:  "no addr",
-			II:    vshard_router.InstanceInfo{UUID: uuid.New()},
+			II:    vshardrouter.InstanceInfo{UUID: uuid.New()},
 			Valid: false,
 		},
 		{
 			Name:  "ok",
-			II:    vshard_router.InstanceInfo{UUID: uuid.New(), Addr: "first.internal:1212"},
+			II:    vshardrouter.InstanceInfo{UUID: uuid.New(), Addr: "first.internal:1212"},
 			Valid: true,
 		},
 	}

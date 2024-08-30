@@ -26,6 +26,7 @@ func TestNewProvider(t *testing.T) {
 
 	for _, tc := range tCases {
 		t.Run("provider", func(t *testing.T) {
+			t.Parallel()
 			if len(tc.Source) == 0 {
 
 				require.Panics(t, func() {
@@ -83,6 +84,7 @@ func TestProvider_Validate(t *testing.T) {
 
 	for _, tc := range tCases {
 		t.Run(fmt.Sprintf("is err: %v", tc.IsErr), func(t *testing.T) {
+			t.Parallel()
 			provider := NewProvider(tc.Source)
 			if tc.IsErr {
 				require.Error(t, provider.Validate())
