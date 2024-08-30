@@ -38,6 +38,7 @@ func TestRouter_RouterCallImpl(t *testing.T) {
 
 	t.Run("bucket id is out of range", func(t *testing.T) {
 		t.Parallel()
+
 		_, _, err := emptyRouter.RouterCallImpl(ctx, 100, CallOpts{}, "test", []byte("test"))
 		require.Errorf(t, err, "bucket id is out of range")
 	})
