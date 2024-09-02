@@ -8,6 +8,10 @@ BUG FIXES:
 * DiscoveryAllBuckets returns nil even if errGr.Wait() returns err, fixed
 * DiscoveryHandleBuckets: misusage of atomics, fixed
 * race when accessing to idToReplicaset, fixed: idToReplicaset is immutable object now
+* RouterMapCallRWImpl: fix misusage of refID atomic
+* RouterMapCallRWImpl: decode bucketCount into 32 bit integer instead of 16 bit
+* RouterMapCallRWImpl: fix concurrent access to idToResult map
+* BucketDiscovery: fix possible concurrent access to resultRs and err vars
 
 FEATURES:
 

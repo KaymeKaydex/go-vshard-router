@@ -115,8 +115,6 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 		knownBucketCount: atomic.Int32{},
 	}
 
-	router.knownBucketCount.Store(0)
-
 	err = cfg.TopologyProvider.Init(router.Topology())
 	if err != nil {
 		router.log().Error(ctx, fmt.Sprintf("cant create new topology provider with err: %s", err))
@@ -143,7 +141,7 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	}
 
 	nWorkers := int32(2)
-	if cfg.NWorkers != 0 {
+	if cfg.NWorkers > 0 {
 		nWorkers = cfg.NWorkers
 	}
 

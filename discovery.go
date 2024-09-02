@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/google/uuid"
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
 )
@@ -70,21 +71,31 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 	wg := sync.WaitGroup{}
 	wg.Add(len(idToReplicasetRef))
 
-	var err error
-	var resultRs *Replicaset
+	type result struct {
+		err error
+		rs  *Replicaset
+	}
+
+	// This works only for go 1.19 or higher. To support older versions
+	// we can use mutex + conditional compilation that checks go version.
+	// Example for conditional compilation: https://www.youtube.com/watch?v=5eQBKqVlNQg
+	var resultAtomic = atomic.Pointer[result]{}
 
 	for rsID, rs := range idToReplicasetRef {
-		rsID := rsID
-		go func(_rs *Replicaset) {
+		go func(rs *Replicaset, rsID uuid.UUID) {
 			defer wg.Done()
-			_, errStat := _rs.BucketStat(ctx, bucketID)
-			if errStat == nil {
-				resultRs, err = r.BucketSet(bucketID, rsID)
+			if _, err := rs.BucketStat(ctx, bucketID); err == nil {
+				var res result
+				res.rs, res.err = r.BucketSet(bucketID, rsID)
+				resultAtomic.Store(&res)
 			}
-		}(rs)
+		}(rs, rsID)
 	}
 
 	wg.Wait()
+
+	res := resultAtomic.Load()
+	resultRs, err := res.rs, res.err
 
 	if err != nil || resultRs == nil {
 		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
