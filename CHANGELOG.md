@@ -18,6 +18,7 @@ FEATURES:
 * Added etcd v2 topology provider implementation (#16)
 * Add TopologyController mock for testing improve
 * Add linter job (#33)
+* New test framework with real tarantools
 
 REFACTOR:
 

@@ -37,3 +37,6 @@ testrace: BUILD_TAGS+=testonly
 testrace:
 	@CGO_ENABLED=1 \
 	$(GO_CMD) test -tags='$(BUILD_TAGS)' -race  -timeout=$(EXTENDED_TEST_TIMEOUT) -parallel=20
+
+test/tnt:
+	@$(MAKE) -C ./tests/tnt
