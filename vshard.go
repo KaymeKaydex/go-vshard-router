@@ -79,6 +79,10 @@ type BucketStatInfo struct {
 }
 
 type InstanceInfo struct {
+	// Name is human-readable id for instance
+	// Starting with tarantool 3.0, the definition is made into a human-readable name,
+	// so far it is not used directly inside the library
+	Name string
 	Addr string
 	UUID uuid.UUID
 }

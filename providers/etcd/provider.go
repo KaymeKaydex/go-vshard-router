@@ -41,78 +41,9 @@ func NewProvider(cfg Config) *Provider {
 	}
 }
 
-func (p *Provider) Init(c vshardrouter.TopologyController) error {
-	resp, err := p.kapi.Get(context.TODO(), p.path, &client.GetOptions{Recursive: true})
-	if err != nil {
-		return err
-	}
-
-	if resp.Node.Nodes.Len() < 2 {
-		return fmt.Errorf("etcd path %s subnodes <2; minimum 2 (/clusters & /instances)", p.path)
-	}
-
-	replicasets := []vshardrouter.ReplicasetInfo{}
-	instances := map[string][]*vshardrouter.InstanceInfo{} // cluster name to instance info
-
-	for _, node := range resp.Node.Nodes {
-		switch filepath.Base(node.Key) {
-		case "clusters":
-			if len(node.Nodes) < 1 {
-				return fmt.Errorf("etcd path %s has no clusters", node.Key)
-			}
-
-			for _, rsNode := range node.Nodes {
-				replicaset := vshardrouter.ReplicasetInfo{}
-
-				replicaset.Name = filepath.Base(rsNode.Key)
-
-				for _, rsInfoNode := range rsNode.Nodes {
-					switch filepath.Base(rsInfoNode.Key) {
-					case "replicaset_uuid":
-						replicaset.UUID, err = uuid.Parse(rsInfoNode.Value)
-						if err != nil {
-							return fmt.Errorf("cant parse replicaset %s uuid %s", replicaset.Name, rsInfoNode.Value)
-						}
-					case "master":
-						// TODO: now we dont support non master auto implementation
-					default:
-						continue
-					}
-				}
-
-				replicasets = append(replicasets, replicaset)
-			}
-		case "instances":
-			if len(node.Nodes) < 1 {
-				return fmt.Errorf("etcd path %s has no instances", node.Key)
-			}
-
-			for _, instanceNode := range node.Nodes {
-				instance := &vshardrouter.InstanceInfo{}
-
-				for _, instanceInfoNode := range instanceNode.Nodes {
-					switch filepath.Base(instanceInfoNode.Key) {
-					case "cluster":
-						instances[instanceInfoNode.Value] = append(instances[instanceInfoNode.Value], instance)
-					case "box":
-						for _, boxNode := range instanceInfoNode.Nodes {
-							switch filepath.Base(boxNode.Key) {
-							case "listen":
-								instance.Addr = boxNode.Value
-							case "instance_uuid":
-								instance.UUID, err = uuid.Parse(boxNode.Value)
-								if err != nil {
-									return fmt.Errorf("cant parse for instance uuid %s", boxNode.Value)
-								}
-							}
-						}
-					}
-				}
-			}
-		default:
-			continue
-		}
-	}
+// mapCluster2Instances combines clusters with instances in map
+func mapCluster2Instances(replicasets []vshardrouter.ReplicasetInfo,
+	instances map[string][]*vshardrouter.InstanceInfo) map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo {
 
 	currentTopology := map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo{}
 
@@ -126,7 +57,100 @@ func (p *Provider) Init(c vshardrouter.TopologyController) error {
 		currentTopology[replicasetInfo] = resInst
 	}
 
-	return c.AddReplicasets(context.TODO(), currentTopology)
+	return currentTopology
+}
+
+func (p *Provider) GetTopology(nodes client.Nodes) (map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo, error) {
+	if nodes.Len() < 2 {
+		return nil, fmt.Errorf("etcd path %s subnodes <2; minimum 2 (/clusters & /instances)", p.path)
+	}
+
+	var replicasets []vshardrouter.ReplicasetInfo
+	instances := map[string][]*vshardrouter.InstanceInfo{} // cluster name to instance info
+
+	for _, node := range nodes {
+		var err error
+
+		switch filepath.Base(node.Key) {
+		case "clusters":
+			if len(node.Nodes) < 1 {
+				return nil, fmt.Errorf("etcd path %s has no clusters", node.Key)
+			}
+
+			for _, rsNode := range node.Nodes {
+				replicaset := vshardrouter.ReplicasetInfo{}
+
+				replicaset.Name = filepath.Base(rsNode.Key)
+
+				for _, rsInfoNode := range rsNode.Nodes {
+					switch filepath.Base(rsInfoNode.Key) {
+					case "replicaset_uuid":
+						replicaset.UUID, err = uuid.Parse(rsInfoNode.Value)
+						if err != nil {
+							return nil, fmt.Errorf("cant parse replicaset %s uuid %s", replicaset.Name, rsInfoNode.Value)
+						}
+					case "master":
+						// TODO: now we dont support non master auto implementation
+					default:
+						continue
+					}
+				}
+
+				replicasets = append(replicasets, replicaset)
+			}
+		case "instances":
+			if len(node.Nodes) < 1 {
+				return nil, fmt.Errorf("etcd path %s has no instances", node.Key)
+			}
+
+			for _, instanceNode := range node.Nodes {
+				instanceName := filepath.Base(instanceNode.Key)
+
+				instance := &vshardrouter.InstanceInfo{
+					Name: instanceName,
+				}
+
+				for _, instanceInfoNode := range instanceNode.Nodes {
+					switch filepath.Base(instanceInfoNode.Key) {
+					case "cluster":
+						instances[instanceInfoNode.Value] = append(instances[instanceInfoNode.Value], instance)
+					case "box":
+						for _, boxNode := range instanceInfoNode.Nodes {
+							switch filepath.Base(boxNode.Key) {
+							case "listen":
+								instance.Addr = boxNode.Value
+							case "instance_uuid":
+								instance.UUID, err = uuid.Parse(boxNode.Value)
+								if err != nil {
+									return nil, fmt.Errorf("cant parse for instance uuid %s", boxNode.Value)
+								}
+							}
+						}
+					}
+				}
+			}
+		default:
+			continue
+		}
+	}
+
+	currentTopology := mapCluster2Instances(replicasets, instances)
+
+	return currentTopology, nil
+}
+
+func (p *Provider) Init(c vshardrouter.TopologyController) error {
+	resp, err := p.kapi.Get(context.TODO(), p.path, &client.GetOptions{Recursive: true})
+	if err != nil {
+		return err
+	}
+
+	topology, err := p.GetTopology(resp.Node.Nodes)
+	if err != nil {
+		return err
+	}
+
+	return c.AddReplicasets(context.TODO(), topology)
 }
 
 // Close must close connection, but etcd v2 client has no interfaces for this
