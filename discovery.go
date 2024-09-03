@@ -26,44 +26,17 @@ const (
 	DiscoveryModeOnce
 )
 
-type searchLock struct {
-	mu        sync.RWMutex
-	perBucket []chan struct{}
-}
-
-func (s *searchLock) WaitOnSearch(bucketID uint64) {
-	ch := s.perBucket[bucketID]
-	if ch == nil {
-		return
-	}
-
-	<-ch
-}
-
-func (s *searchLock) StartSearch(bucketID uint64) chan struct{} {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	ch := make(chan struct{})
-	s.perBucket[bucketID] = ch
-
-	return ch
-}
-
 // BucketDiscovery search bucket in whole cluster
 func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replicaset, error) {
-	r.searchLock.WaitOnSearch(bucketID)
+	view := r.getConsistentView()
 
-	rs := r.routeMap[bucketID]
+	rs := view.routeMap[bucketID].Load()
 	if rs != nil {
 		return rs, nil
 	}
 
 	// it`s ok if in the same time we have few active searches
 	// mu per bucket is expansive
-	stopSearchCh := r.searchLock.StartSearch(bucketID)
-	defer close(stopSearchCh)
-
 	r.cfg.Logger.Info(ctx, fmt.Sprintf("Discovering bucket %d", bucketID))
 
 	idToReplicasetRef := r.getIDToReplicaset()
@@ -85,6 +58,8 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 		go func(rs *Replicaset, rsID uuid.UUID) {
 			defer wg.Done()
 			if _, err := rs.BucketStat(ctx, bucketID); err == nil {
+				// It's ok if several replicasets return ok to bucket_stat command for the same bucketID,
+				// just pick any of them.
 				var res result
 				res.rs, res.err = r.BucketSet(bucketID, rsID)
 				resultAtomic.Store(&res)
@@ -118,7 +93,9 @@ func (r *Router) BucketResolve(ctx context.Context, bucketID uint64) (*Replicase
 		return nil, fmt.Errorf("bucket id is out of range: %d (total %d)", bucketID, r.cfg.TotalBucketCount)
 	}
 
-	rs := r.routeMap[bucketID]
+	view := r.getConsistentView()
+
+	rs := view.routeMap[bucketID].Load()
 	if rs != nil {
 		return rs, nil
 	}
@@ -134,11 +111,14 @@ func (r *Router) BucketResolve(ctx context.Context, bucketID uint64) (*Replicase
 
 // DiscoveryHandleBuckets arrange downloaded buckets to the route map so as they reference a given replicaset.
 func (r *Router) DiscoveryHandleBuckets(ctx context.Context, rs *Replicaset, buckets []uint64) {
+	view := r.getConsistentView()
+
 	count := rs.bucketCount.Load()
+
 	affected := make(map[*Replicaset]int)
 
 	for _, bucketID := range buckets {
-		oldRs := r.routeMap[bucketID]
+		oldRs := view.routeMap[bucketID].Swap(rs)
 
 		if oldRs != rs {
 			count++
@@ -151,9 +131,8 @@ func (r *Router) DiscoveryHandleBuckets(ctx context.Context, rs *Replicaset, buc
 				oldRs.bucketCount.Add(-1)
 			} else {
 				//                 router.known_bucket_count = router.known_bucket_count + 1
-				r.knownBucketCount.Add(1)
+				view.knownBucketCount.Add(1)
 			}
-			r.routeMap[bucketID] = rs
 		}
 	}
 
@@ -177,10 +156,9 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 
 	r.log().Info(ctx, "start discovery all buckets")
 
-	knownBucket := atomic.Int32{}
-
 	errGr, ctx := errgroup.WithContext(ctx)
 
+	view := r.getConsistentView()
 	idToReplicasetRef := r.getIDToReplicaset()
 
 	for _, rs := range idToReplicasetRef {
@@ -218,8 +196,9 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 						break
 					}
 
-					r.routeMap[bucket] = rs
-					knownBucket.Add(1)
+					if old := view.routeMap[bucket].Swap(rs); old == nil {
+						view.knownBucketCount.Add(1)
+					}
 				}
 
 				// There are no more buckets
@@ -238,8 +217,6 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 		return fmt.Errorf("errGr.Wait() err: %w", err)
 	}
 	r.log().Info(ctx, fmt.Sprintf("discovery done since: %s", time.Since(t)))
-
-	r.knownBucketCount.Store(knownBucket.Load())
 
 	return nil
 }
