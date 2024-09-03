@@ -1,3 +1,9 @@
+## Unreleased
+
+REFACTOR:
+
+* resolve issue #38: simplify DiscoveryAllBuckets and remove suspicious if
+
 ## 0.0.12
 
 BUG FIXES:

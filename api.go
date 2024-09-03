@@ -361,7 +361,7 @@ func (r *Router) RouterMapCallRWImpl(
 		return nil, err
 	}
 
-	if totalBucketCount != int32(r.cfg.TotalBucketCount) {
+	if uint64(totalBucketCount) != r.cfg.TotalBucketCount {
 		return nil, fmt.Errorf("unknown bucket counts %d", totalBucketCount)
 	}
 
