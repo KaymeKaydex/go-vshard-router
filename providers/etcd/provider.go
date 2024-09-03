@@ -60,7 +60,13 @@ func mapCluster2Instances(replicasets []vshardrouter.ReplicasetInfo,
 	return currentTopology
 }
 
-func (p *Provider) GetTopology(nodes client.Nodes) (map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo, error) {
+func (p *Provider) GetTopology() (map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo, error) {
+	resp, err := p.kapi.Get(context.TODO(), p.path, &client.GetOptions{Recursive: true})
+	if err != nil {
+		return nil, err
+	}
+	nodes := resp.Node.Nodes
+
 	if nodes.Len() < 2 {
 		return nil, fmt.Errorf("etcd path %s subnodes <2; minimum 2 (/clusters & /instances)", p.path)
 	}
@@ -140,12 +146,7 @@ func (p *Provider) GetTopology(nodes client.Nodes) (map[vshardrouter.ReplicasetI
 }
 
 func (p *Provider) Init(c vshardrouter.TopologyController) error {
-	resp, err := p.kapi.Get(context.TODO(), p.path, &client.GetOptions{Recursive: true})
-	if err != nil {
-		return err
-	}
-
-	topology, err := p.GetTopology(resp.Node.Nodes)
+	topology, err := p.GetTopology()
 	if err != nil {
 		return err
 	}
