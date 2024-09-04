@@ -17,6 +17,8 @@ func TestRouterMapCall(t *testing.T) {
 		return
 	}
 
+	t.Parallel()
+
 	ctx := context.Background()
 
 	cfg := getCfg()

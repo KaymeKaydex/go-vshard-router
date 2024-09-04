@@ -115,7 +115,13 @@ func TestConncurrentTopologyChange(t *testing.T) {
 		return
 	}
 
-	t.Parallel()
+	// suppress the below linter warning:
+	// unused-parameter: parameter 't' seems to be unused, consider removing or renaming it as _ (revive)
+	_ = t
+
+	// Don't run this parallel with other tests, because this test is heavy and used to detect data races.
+	// Therefore this test may impact other ones.
+	// t.Parallel()
 
 	tc := &concurrentTopologyProvider{}
 
@@ -151,7 +157,11 @@ func TestConncurrentTopologyChange(t *testing.T) {
 			bucketID := uint64((rand.Int() % totalBucketCount) + 1)
 			args := []interface{}{"arg1"}
 
-			_, _, _ = router.RouterCallImpl(ctx, bucketID, vshardrouter.CallOpts{}, "echo", args)
+			callOpts := vshardrouter.CallOpts{
+				VshardMode: vshardrouter.ReadMode,
+			}
+
+			_, _, _ = router.RouterCallImpl(ctx, bucketID, callOpts, "echo", args)
 		}
 	}()
 
