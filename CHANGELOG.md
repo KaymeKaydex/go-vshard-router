@@ -3,6 +3,7 @@
 REFACTOR:
 
 * resolve issue #38: simplify DiscoveryAllBuckets and remove suspicious if
+* resolve issue #46: drastically simplify RouterMapCallRWImpl and added tests with real tnt
 
 ## 0.0.12
 

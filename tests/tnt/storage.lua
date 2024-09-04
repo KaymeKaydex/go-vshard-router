@@ -4,6 +4,7 @@ require('strict').on()
 
 local box = require('box')
 local debug = require('debug')
+local fiber = require('fiber')
 local math = require('math')
 local os = require('os')
 

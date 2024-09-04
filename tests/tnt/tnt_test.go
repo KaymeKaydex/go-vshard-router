@@ -14,6 +14,9 @@ const (
 
 	envNreplicasetsKey = "NREPLICASETS"
 	envStartPortKey    = "START_PORT"
+
+	defaultTntUser     = "storage"
+	defaultTntPassword = "storage"
 )
 
 func getEnvInt(key string) int {
