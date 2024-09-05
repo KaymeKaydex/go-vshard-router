@@ -2,16 +2,19 @@ package vshard_router //nolint:revive
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 )
 
 var (
-	_ MetricsProvider = (*EmptyMetrics)(nil)
-	_ LogProvider     = (*EmptyLogger)(nil)
-	_ LogProvider     = (*StdoutLogger)(nil)
+	emptyMetricsProvider MetricsProvider = (*EmptyMetrics)(nil)
+
+	emptyLogfProvider LogfProvider = (*emptyLogger)(nil)
+	_                 LogProvider  = (*StdoutLogger)(nil)
 )
 
+// A legacy interface for backward compatibility
 type LogProvider interface {
 	Info(context.Context, string)
 	Debug(context.Context, string)
@@ -19,12 +22,40 @@ type LogProvider interface {
 	Warn(context.Context, string)
 }
 
-type EmptyLogger struct{}
+type LogfProvider interface {
+	Infof(ctx context.Context, format string, v ...any)
+	Debugf(ctx context.Context, format string, v ...any)
+	Errorf(ctx context.Context, format string, v ...any)
+	Warnf(ctx context.Context, format string, v ...any)
+}
 
-func (e *EmptyLogger) Info(_ context.Context, _ string)  {}
-func (e *EmptyLogger) Debug(_ context.Context, _ string) {}
-func (e *EmptyLogger) Error(_ context.Context, _ string) {}
-func (e *EmptyLogger) Warn(_ context.Context, _ string)  {}
+// We use this type to support legacy logger api
+type legacyLoggerProxy struct {
+	l LogProvider
+}
+
+func (p *legacyLoggerProxy) Infof(ctx context.Context, format string, v ...any) {
+	p.l.Info(ctx, fmt.Sprintf(format, v...))
+}
+
+func (p *legacyLoggerProxy) Debugf(ctx context.Context, format string, v ...any) {
+	p.l.Debug(ctx, fmt.Sprintf(format, v...))
+}
+
+func (p *legacyLoggerProxy) Errorf(ctx context.Context, format string, v ...any) {
+	p.l.Error(ctx, fmt.Sprintf(format, v...))
+}
+
+func (p *legacyLoggerProxy) Warnf(ctx context.Context, format string, v ...any) {
+	p.l.Warn(ctx, fmt.Sprintf(format, v...))
+}
+
+type emptyLogger struct{}
+
+func (e *emptyLogger) Infof(_ context.Context, _ string, _ ...any)  {}
+func (e *emptyLogger) Debugf(_ context.Context, _ string, _ ...any) {}
+func (e *emptyLogger) Errorf(_ context.Context, _ string, _ ...any) {}
+func (e *emptyLogger) Warnf(_ context.Context, _ string, _ ...any)  {}
 
 type StdoutLogger struct{}
 

@@ -102,7 +102,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		if since := time.Since(timeStart); since > timeout {
 			r.metrics().RequestDuration(since, false, false)
 
-			r.log().Debug(ctx, fmt.Sprintf("return result on timeout; since %s of timeout %s", since, timeout))
+			r.log().Debugf(ctx, "return result on timeout; since %s of timeout %s", since, timeout)
 			if err == nil {
 				err = fmt.Errorf("cant get call cause call impl timeout")
 			}
@@ -114,26 +114,26 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		rs, err = r.BucketResolve(ctx, bucketID)
 		if err != nil {
-			r.log().Debug(ctx, fmt.Sprintf("cant resolve bucket %d with error: %s", bucketID, err.Error()))
+			r.log().Debugf(ctx, "cant resolve bucket %d with error: %s", bucketID, err.Error())
 
 			r.metrics().RetryOnCall("bucket_resolve_error")
 			continue
 		}
 
-		r.log().Info(ctx, fmt.Sprintf("try call %s on replicaset %s for bucket %d", fnc, rs.info.Name, bucketID))
+		r.log().Infof(ctx, "try call %s on replicaset %s for bucket %d", fnc, rs.info.Name, bucketID)
 
 		future := rs.conn.Do(req, opts.PoolMode)
 
 		var respData []interface{}
 		respData, err = future.Get()
 		if err != nil {
-			r.log().Error(ctx, fmt.Sprintf("got future error: %s", err))
+			r.log().Errorf(ctx, "got future error: %s", err)
 			r.metrics().RetryOnCall("future_get_error")
 
 			continue
 		}
 
-		r.log().Debug(ctx, fmt.Sprintf("got call result response data %s", respData))
+		r.log().Debugf(ctx, "got call result response data %s", respData)
 
 		if len(respData) < 1 {
 			// vshard.storage.call(func) returns up to two values:
@@ -141,7 +141,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			// - func result, omitted if func does not return anything
 			err = fmt.Errorf("invalid length of response data: must be >= 1, current: %d", len(respData))
 
-			r.log().Error(ctx, err.Error())
+			r.log().Errorf(ctx, "%s", err.Error())
 
 			r.metrics().RetryOnCall("resp_data_error")
 			continue
@@ -161,13 +161,13 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 				err = fmt.Errorf("cant decode vhsard err by trarantool with err: %s; continue try", err)
 
-				r.log().Error(ctx, err.Error())
+				r.log().Errorf(ctx, "%s", err.Error())
 				continue
 			}
 
 			err = vshardErr
 
-			r.log().Error(ctx, fmt.Sprintf("got vshard storage call error: %s", err))
+			r.log().Errorf(ctx, "got vshard storage call error: %s", err)
 
 			if vshardErr.Name == "WRONG_BUCKET" ||
 				vshardErr.Name == "BUCKET_IS_LOCKED" ||
@@ -184,7 +184,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		isVShardRespOk := false
 		err = future.GetTyped(&[]interface{}{&isVShardRespOk})
 		if err != nil {
-			r.log().Debug(ctx, fmt.Sprintf("cant get typed with err: %s", err))
+			r.log().Debugf(ctx, "cant get typed with err: %s", err)
 
 			continue
 		}
