@@ -70,11 +70,10 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 	wg.Wait()
 
 	res := resultAtomic.Load()
-	resultRs, err := res.rs, res.err
-
-	if err != nil || resultRs == nil {
+	if res == nil || res.err != nil || res.rs == nil {
 		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
 	}
+
 	/*
 	   -- All replicasets were scanned, but a bucket was not
 	   -- found anywhere, so most likely it does not exist. It
@@ -84,12 +83,12 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 	   -- discovery).
 	*/
 
-	return resultRs, nil
+	return res.rs, nil
 }
 
 // BucketResolve resolve bucket id to replicaset
 func (r *Router) BucketResolve(ctx context.Context, bucketID uint64) (*Replicaset, error) {
-	if bucketID > r.cfg.TotalBucketCount {
+	if bucketID < 1 || r.cfg.TotalBucketCount < bucketID {
 		return nil, fmt.Errorf("bucket id is out of range: %d (total %d)", bucketID, r.cfg.TotalBucketCount)
 	}
 

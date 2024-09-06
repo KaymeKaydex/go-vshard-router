@@ -2,6 +2,7 @@ package tnt_test
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"strconv"
 	"testing"
@@ -49,6 +50,11 @@ func getCfg() map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo {
 	}
 
 	return c.clusterCfg()
+}
+
+func randBucketID(totalBucketCount uint64) uint64 {
+	//nolint:gosec
+	return (rand.Uint64() % totalBucketCount) + 1
 }
 
 func TestConcurrentRouterCall(t *testing.T) {

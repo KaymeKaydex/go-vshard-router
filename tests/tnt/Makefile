@@ -55,4 +55,6 @@ cluster-down:
 gotest:
 	@echo "${GREEN}STAGE: RUN GOTESTS${NC}"
 	-go test -race -parallel=20 -coverpkg="../../" -coverprofile cover.out -timeout=90s
-#	go tool cover -html=cover.out
+
+open-coverage:
+	go tool cover -html=cover.out
