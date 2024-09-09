@@ -70,6 +70,7 @@ func main() {
 		Handler:      mux,
 	}
 
+	log.Printf("start listening on %s", cfg.ListenerConfig.Address)
 	err = s.ListenAndServe()
 	if err != nil {
 		log.Println(err)

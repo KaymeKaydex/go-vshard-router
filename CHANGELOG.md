@@ -10,6 +10,10 @@ REFACTOR:
 * resolve issue #46: drastically simplify RouterMapCallRWImpl and added tests with real tnt
 * Use typed nil pointers instead of memory allocation for EmptyMetrics and emptyLogger structs
 
+EXAMPLES:
+* customer go mod fixed 
+* add customer example listen addr log
+
 ## 0.0.12
 
 BUG FIXES:
