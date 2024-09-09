@@ -1,5 +1,6 @@
 export NREPLICASETS:=5
 export START_PORT:=33000
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY:=YES # See review comments for PR #56 why
 
 RED=\033[0;31m
 GREEN=\033[0;32m
