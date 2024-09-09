@@ -3,6 +3,7 @@
 FEATURES:
 
 * Support new Sprintf-like logging interface (#48)
+* Added call interfaces backwards compatible with go-tarantool (#31).
 
 REFACTOR:
 

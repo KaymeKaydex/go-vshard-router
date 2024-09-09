@@ -92,13 +92,21 @@ type Config struct {
 	TopologyProvider TopologyProvider // TopologyProvider is required provider
 
 	// Discovery
-	DiscoveryTimeout time.Duration // DiscoveryTimeout is timeout between cron discovery job; by default there is no timeout
+	// DiscoveryTimeout is timeout between cron discovery job; by default there is no timeout.
+	DiscoveryTimeout time.Duration
 	DiscoveryMode    DiscoveryMode
 
 	TotalBucketCount uint64
 	User             string
 	Password         string
 	PoolOpts         tarantool.Opts
+
+	// BucketGetter is an optional argument.
+	// You can specify a function that will receive the bucket id from the context.
+	// This is useful if you use middleware that inserts the calculated bucket id into the request context.
+	BucketGetter func(ctx context.Context) uint64
+	// RequestTimeout timeout for requests to Tarantool.
+	RequestTimeout time.Duration
 }
 
 type BucketStatInfo struct {
