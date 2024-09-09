@@ -10,6 +10,7 @@ import (
 	"time"
 
 	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
+	"github.com/stretchr/testify/require"
 )
 
 type concurrentTopologyProvider struct {
@@ -133,9 +134,8 @@ func TestConncurrentTopologyChange(t *testing.T) {
 		User:             defaultTntUser,
 		Password:         defaultTntPassword,
 	})
-	if err != nil {
-		panic(err)
-	}
+
+	require.Nil(t, err, "NewRouter finished successfully")
 
 	wg := sync.WaitGroup{}
 

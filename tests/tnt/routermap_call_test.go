@@ -32,9 +32,7 @@ func TestRouterMapCall(t *testing.T) {
 		Password:         defaultTntPassword,
 	})
 
-	if err != nil {
-		panic(err)
-	}
+	require.Nil(t, err, "NewRouter finished successfully")
 
 	const arg = "arg1"
 

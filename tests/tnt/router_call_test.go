@@ -34,9 +34,7 @@ func TestRouterCall(t *testing.T) {
 		Password:         defaultTntPassword,
 	})
 
-	if err != nil {
-		panic(err)
-	}
+	require.Nil(t, err, "NewRouter finished successfully")
 
 	//nolint:gosec
 	bucketID := uint64((rand.Int() % totalBucketCount) + 1)
