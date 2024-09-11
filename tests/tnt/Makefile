@@ -20,7 +20,7 @@ clean:
 
 # prepare vshard-storages, that contains ${NREPLICASETS} replicasets.
 # every replicaset has one master and one follower instance.
-# every replicaset runs in background mode, no logs are stored (/dev/null)
+# every replicaset runs in background mode
 cluster-up:
 	@echo "${GREEN}STAGE: CLUSTER UP${NC}"
 	mkdir -p tmp

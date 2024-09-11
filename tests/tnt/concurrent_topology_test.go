@@ -116,10 +116,6 @@ func TestConncurrentTopologyChange(t *testing.T) {
 		return
 	}
 
-	// suppress the below linter warning:
-	// unused-parameter: parameter 't' seems to be unused, consider removing or renaming it as _ (revive)
-	_ = t
-
 	// Don't run this parallel with other tests, because this test is heavy and used to detect data races.
 	// Therefore this test may impact other ones.
 	// t.Parallel()
