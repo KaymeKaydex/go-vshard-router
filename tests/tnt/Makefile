@@ -1,5 +1,6 @@
-NREPLICASETS?=5
-START_PORT?=33000
+export NREPLICASETS:=5
+export START_PORT:=33000
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY:=YES # See review comments for PR #56 why
 
 RED=\033[0;31m
 GREEN=\033[0;32m
@@ -19,7 +20,7 @@ clean:
 
 # prepare vshard-storages, that contains ${NREPLICASETS} replicasets.
 # every replicaset has one master and one follower instance.
-# every replicaset runs in background mode, no logs are stored (/dev/null)
+# every replicaset runs in background mode
 cluster-up:
 	@echo "${GREEN}STAGE: CLUSTER UP${NC}"
 	mkdir -p tmp
@@ -30,16 +31,16 @@ cluster-up:
 		ln -sf `(pwd)`/cfgmaker.lua tmp/$${rsid}/master/cfgmaker.lua;					\
 		ln -sf `(pwd)`/storage.lua tmp/$${rsid}/follower/storage_$${rsid}_follower.lua;	\
 		ln -sf `(pwd)`/cfgmaker.lua tmp/$${rsid}/follower/cfgmaker.lua;					\
-		TT_WORK_DIR=tmp/$${rsid}/master/ TT_PID_FILE="tarantool.pid" TT_BACKGROUND=true START_PORT=${START_PORT} TT_LOG=/dev/null NREPLICASETS=${NREPLICASETS} tarantool tmp/$${rsid}/master/storage_$${rsid}_master.lua;		\
-		TT_WORK_DIR=tmp/$${rsid}/follower/ TT_PID_FILE="tarantool.pid" TT_BACKGROUND=true START_PORT=${START_PORT} TT_LOG=/dev/null NREPLICASETS=${NREPLICASETS} tarantool tmp/$${rsid}/follower/storage_$${rsid}_follower.lua;	\
+		TT_WORK_DIR=tmp/$${rsid}/master/ TT_PID_FILE=tarantool.pid TT_BACKGROUND=true TT_LOG=tarantool.log tarantool tmp/$${rsid}/master/storage_$${rsid}_master.lua;		\
+		TT_WORK_DIR=tmp/$${rsid}/follower/ TT_PID_FILE=tarantool.pid TT_BACKGROUND=true TT_LOG=tarantool.log tarantool tmp/$${rsid}/follower/storage_$${rsid}_follower.lua; \
 		((rsid = rsid + 1)) ; \
-    done
+	done
 
 # bootstrap vshard cluster using lua vshard.router
 bootstrap:
 	@echo "${GREEN}STAGE: BOOTSTRAP CLUSTER${NC}"
 	mkdir -p tmp/router_work_dir
-	TT_WORK_DIR=tmp/router_work_dir/ NREPLICASETS=${NREPLICASETS} START_PORT=${START_PORT} tarantool router.lua
+	TT_WORK_DIR=tmp/router_work_dir/ tarantool router.lua
 
 # stop vshard storage tarantool
 cluster-down:
@@ -53,5 +54,5 @@ cluster-down:
 # run go tests, minus "-" signs before command allows failures, otherwise cluster-down stage won't run.
 gotest:
 	@echo "${GREEN}STAGE: RUN GOTESTS${NC}"
-	-NREPLICASETS=${NREPLICASETS} START_PORT=${START_PORT} go test -race -parallel=20 -coverpkg="../../" -coverprofile cover.out -timeout=90s
+	-go test -race -parallel=20 -coverpkg="../../" -coverprofile cover.out -timeout=90s
 #	go tool cover -html=cover.out

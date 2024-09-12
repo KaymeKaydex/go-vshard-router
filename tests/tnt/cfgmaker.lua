@@ -89,7 +89,6 @@ end
 local function clustercfg(start_port, nreplicasets)
     local cfg = {
         sharding = {},
-        replication_connect_quorum = 0,
     }
 
     for rs_id = 1, nreplicasets do
