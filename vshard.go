@@ -162,12 +162,10 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	if cfg.DiscoveryMode == DiscoveryModeOn {
 		discoveryCronCtx, cancelFunc := context.WithCancel(context.Background())
 
-		go func() {
-			discoveryErr := router.startCronDiscovery(discoveryCronCtx)
-			if discoveryErr != nil {
-				router.log().Errorf(ctx, "error when run cron discovery: %s", discoveryErr)
-			}
-		}()
+		// run background cron discovery loop
+		// suppress linter warning: Non-inherited new context, use function like `context.WithXXX` instead (contextcheck)
+		//nolint:contextcheck
+		go router.cronDiscovery(discoveryCronCtx)
 
 		router.cancelDiscovery = cancelFunc
 	}
@@ -214,9 +212,15 @@ func (r *Router) RouteMapClean() {
 }
 
 func prepareCfg(cfg Config) (Config, error) {
+	const discoveryTimeoutDefault = 1 * time.Minute
+
 	err := validateCfg(cfg)
 	if err != nil {
 		return Config{}, fmt.Errorf("%v: %v", ErrInvalidConfig, err)
+	}
+
+	if cfg.DiscoveryTimeout == 0 {
+		cfg.DiscoveryTimeout = discoveryTimeoutDefault
 	}
 
 	if cfg.Loggerf == nil {
