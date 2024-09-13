@@ -149,8 +149,7 @@ func TestConncurrentTopologyChange(t *testing.T) {
 			default:
 			}
 
-			//nolint:gosec
-			bucketID := uint64((rand.Int() % totalBucketCount) + 1)
+			bucketID := randBucketID(totalBucketCount)
 			args := []interface{}{"arg1"}
 
 			callOpts := vshardrouter.CallOpts{

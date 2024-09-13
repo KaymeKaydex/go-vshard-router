@@ -75,7 +75,7 @@ func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketSt
 
 	// A problem with key-code 1
 	// todo: fix after https://github.com/tarantool/go-tarantool/issues/368
-	err = mapstructure.Decode(respData[0], bsInfo)
+	err = mapstructure.Decode(respData[0], &bsInfo)
 	if err != nil {
 		return bsInfo, fmt.Errorf("can't decode bsInfo: %w", err)
 	}

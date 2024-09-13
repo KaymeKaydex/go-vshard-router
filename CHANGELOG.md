@@ -1,5 +1,12 @@
 ## Unreleased
 
+BUG FIXES:
+
+* RouterCallImpl: fix decoding responce from storage_ref (partially #42)
+* RouterCallImpl: fix decoding responce from storage_map (partially #42)
+* BucketDiscovery: check res for nil
+* BucketStat: decode bsInfo by ptr
+
 FEATURES:
 
 * Support new Sprintf-like logging interface (#48)
@@ -9,7 +16,13 @@ REFACTOR:
 * resolve issue #38: simplify DiscoveryAllBuckets and remove suspicious if
 * resolve issue #46: drastically simplify RouterMapCallRWImpl and added tests with real tnt
 * Use typed nil pointers instead of memory allocation for EmptyMetrics and emptyLogger structs
+
+TESTS:
+
 * New test for RouterCallImpl (and fix the old one)
+* New tnt tests for discovery logic
+* New tnt tests for RouterMapCallRWImpl
+* New tnt tests for topology logic
 
 EXAMPLES:
 * customer go mod fixed 
