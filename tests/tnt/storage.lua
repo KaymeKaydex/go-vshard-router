@@ -86,7 +86,7 @@ box.once("testapp:schema:1", function()
     box.schema.func.create('raise_client_error')
     box.schema.role.grant('public', 'execute', 'function', 'raise_client_error')
 
-    box.schema.user.grant('guest', 'super')
+    box.schema.user.grant('storage', 'super')
 end)
 
 

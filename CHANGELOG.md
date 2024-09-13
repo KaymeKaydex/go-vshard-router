@@ -16,6 +16,9 @@ REFACTOR:
 * resolve issue #38: simplify DiscoveryAllBuckets and remove suspicious if
 * resolve issue #46: drastically simplify RouterMapCallRWImpl and added tests with real tnt
 * Use typed nil pointers instead of memory allocation for EmptyMetrics and emptyLogger structs
+
+TESTS:
+
 * New test for RouterCallImpl (and fix the old one)
 * New tnt tests for discovery logic
 * New tnt tests for RouterMapCallRWImpl
