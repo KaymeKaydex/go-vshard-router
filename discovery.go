@@ -111,39 +111,36 @@ func (r *Router) BucketResolve(ctx context.Context, bucketID uint64) (*Replicase
 // DiscoveryHandleBuckets arrange downloaded buckets to the route map so as they reference a given replicaset.
 func (r *Router) DiscoveryHandleBuckets(ctx context.Context, rs *Replicaset, buckets []uint64) {
 	view := r.getConsistentView()
-
-	count := rs.bucketCount.Load()
-
-	affected := make(map[*Replicaset]int)
+	removedFrom := make(map[*Replicaset]int)
 
 	for _, bucketID := range buckets {
 		oldRs := view.routeMap[bucketID].Swap(rs)
 
-		if oldRs != rs {
-			count++
+		if oldRs == rs {
+			continue
+		}
 
-			if oldRs != nil {
-				if _, exists := affected[oldRs]; !exists {
-					affected[oldRs] = int(oldRs.bucketCount.Load())
-				}
+		if oldRs == nil {
+			view.knownBucketCount.Add(1)
+		}
 
-				oldRs.bucketCount.Add(-1)
-			} else {
-				//                 router.known_bucket_count = router.known_bucket_count + 1
-				view.knownBucketCount.Add(1)
-			}
+		// We don't check oldRs for nil here, because it's a valid key too (if rs == nil, it means removed from unknown buckets set)
+		removedFrom[oldRs]++
+	}
+
+	var addedToRs int
+	for rs, removedFromRs := range removedFrom {
+		addedToRs += removedFromRs
+
+		switch rs {
+		case nil:
+			r.log().Debugf(ctx, "Added new %d buckets to the cluster map", removedFromRs)
+		default:
+			r.log().Debugf(ctx, "Removed %d buckets from replicaset %s", removedFromRs, rs.info.Name)
 		}
 	}
 
-	if count != rs.bucketCount.Load() {
-		r.log().Infof(ctx, "Updated %s buckets: was %d, became %d", rs.info.Name, rs.bucketCount.Load(), count)
-	}
-
-	rs.bucketCount.Store(count)
-
-	for rs, oldBucketCount := range affected {
-		r.log().Infof(ctx, "Affected buckets of %s: was %d, became %d", rs.info.Name, oldBucketCount, rs.bucketCount.Load())
-	}
+	r.log().Infof(ctx, "Added %d buckets to replicaset %s", addedToRs, rs.info.Name)
 }
 
 func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {

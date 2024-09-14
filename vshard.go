@@ -186,15 +186,8 @@ func (r *Router) BucketSet(bucketID uint64, rsID uuid.UUID) (*Replicaset, error)
 
 	view := r.getConsistentView()
 
-	oldReplicaset := view.routeMap[bucketID].Swap(rs)
-	if oldReplicaset != rs {
-		if oldReplicaset != nil {
-			oldReplicaset.bucketCount.Add(-1)
-		} else {
-			view.knownBucketCount.Add(1)
-		}
-
-		rs.bucketCount.Add(1)
+	if oldRs := view.routeMap[bucketID].Swap(rs); oldRs == nil {
+		view.knownBucketCount.Add(1)
 	}
 
 	return rs, nil
@@ -203,7 +196,7 @@ func (r *Router) BucketSet(bucketID uint64, rsID uuid.UUID) (*Replicaset, error)
 func (r *Router) BucketReset(bucketID uint64) {
 	view := r.getConsistentView()
 
-	if bucketID > uint64(len(view.routeMap))+1 {
+	if bucketID > r.cfg.TotalBucketCount {
 		return
 	}
 
@@ -213,17 +206,11 @@ func (r *Router) BucketReset(bucketID uint64) {
 }
 
 func (r *Router) RouteMapClean() {
-	idToReplicasetRef := r.getIDToReplicaset()
-
 	newView := &consistentView{
 		routeMap: make([]atomic.Pointer[Replicaset], r.cfg.TotalBucketCount+1),
 	}
 
 	r.setConsistentView(newView)
-
-	for _, rs := range idToReplicasetRef {
-		rs.bucketCount.Store(0)
-	}
 }
 
 func prepareCfg(cfg Config) (Config, error) {
