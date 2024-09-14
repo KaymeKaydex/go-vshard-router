@@ -3,7 +3,6 @@ package vshard_router //nolint:revive
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,8 +28,6 @@ type ReplicasetCallOpts struct {
 type Replicaset struct {
 	conn pool.Pooler
 	info ReplicasetInfo
-
-	bucketCount atomic.Int32
 }
 
 func (rs *Replicaset) String() string {
