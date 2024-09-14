@@ -2,16 +2,20 @@
 
 BUG FIXES:
 
-* RouterCallImpl: fix decoding responce from storage_ref (partially #42)
-* RouterCallImpl: fix decoding responce from storage_map (partially #42)
+* RouterCallImpl: fix decoding response from storage_ref (partially #42)
+* RouterCallImpl: fix decoding response from storage_map (partially #42)
 * BucketDiscovery: check res for nil
 * BucketStat: decode bsInfo by ptr
+* ReplicaCall: fix decoding response (#42)
+* ReplicaCall: fix ignoring timeout while waiting for future.Get()
 
 FEATURES:
 
 * Support new Sprintf-like logging interface (#48)
 * DiscoveryTimeout by default is 1 minute (zero DiscoveryTimeout is not allowed #60)
 * All discovering logs has new prefix [DISCOVERY]
+* Introduce Replicaset.CallAsync, it is usefull to send concurrent requests to replicasets;
+	additionally, CallAsync provides new interface to interact with replicaset without cons of interface of ReplicaCall
 
 REFACTOR:
 
@@ -31,6 +35,8 @@ TESTS:
   * 2 sections for CI: static checks and tests
   * integration tests run on ci with Tarantool cluster on vshard
   * implemented luacheck for static checks
+* New tnt tests for ReplicaCall
+* New tnt tests for CallAsync
 
 EXAMPLES:
 * customer go mod fixed 
