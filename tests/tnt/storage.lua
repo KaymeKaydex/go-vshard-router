@@ -9,7 +9,8 @@ local math = require('math')
 local os = require('os')
 
 -- vshard must be global, not local. Otherwise it does not work.
-vshard = require('vshard')
+local vshard = require 'vshard'
+rawset(_G, 'vshard', vshard)
 
 local function getenvint(envname)
 	local v = tonumber(os.getenv(envname) or 0)

@@ -24,6 +24,10 @@ TESTS:
 * New tnt tests for discovery logic
 * New tnt tests for RouterMapCallRWImpl
 * New tnt tests for topology logic
+* Big CI update
+  * 2 sections for CI: static checks and tests
+  * integration tests run on ci with Tarantool cluster on vshard
+  * implemented luacheck for static checks
 
 EXAMPLES:
 * customer go mod fixed 

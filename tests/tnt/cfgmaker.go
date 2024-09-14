@@ -1,4 +1,4 @@
-package tnt_test
+package tnt
 
 import (
 	"fmt"

@@ -1,7 +1,8 @@
-package tnt_test
+package tnt
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"strconv"
@@ -41,6 +42,14 @@ func isCorrectRun() bool {
 	}
 
 	return true
+}
+
+func skipOnInvalidRun(t *testing.T) {
+	if !isCorrectRun() {
+		log.Printf("Incorrect run of tnt-test framework")
+
+		t.Skip("skipped cause env invalid")
+	}
 }
 
 func getCfg() map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo {

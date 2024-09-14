@@ -1,0 +1,51 @@
+name: Run checks
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  luacheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Setup Tarantool
+        uses: tarantool/setup-tarantool@v2
+        with:
+          tarantool-version: '2.8'
+
+      - name: Setup tt
+        run: |
+          curl -L https://tarantool.io/release/2/installer.sh | sudo bash
+          sudo apt install -y tt
+          tt version
+
+      - name: Setup luacheck
+        run: tt rocks install luacheck 0.25.0
+
+      - name: Run luacheck
+        run: ./.rocks/bin/luacheck .
+
+  golangci-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v2
+
+      - uses: actions/checkout@v2
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        continue-on-error: true
+        with:
+          # The first run is for GitHub Actions error format.
+          args: --config=.golangci.yaml
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          # The second run is for human-readable error format with a file name
+          # and a line number.
+          args: --out-${NO_FUTURE}format colored-line-number --config=.golangci.yaml

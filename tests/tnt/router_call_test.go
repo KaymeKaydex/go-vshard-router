@@ -1,8 +1,7 @@
-package tnt_test
+package tnt
 
 import (
 	"context"
-	"log"
 	"testing"
 	"time"
 
@@ -13,10 +12,7 @@ import (
 )
 
 func TestRouterCallProto(t *testing.T) {
-	if !isCorrectRun() {
-		log.Printf("Incorrect run of tnt-test framework")
-		return
-	}
+	skipOnInvalidRun(t)
 
 	t.Parallel()
 
