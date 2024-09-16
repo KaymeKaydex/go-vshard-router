@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -29,66 +27,6 @@ const (
 
 // BucketDiscovery search bucket in whole cluster
 func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replicaset, error) {
-	view := r.getConsistentView()
-
-	rs := view.routeMap[bucketID].Load()
-	if rs != nil {
-		return rs, nil
-	}
-
-	// it`s ok if in the same time we have few active searches
-	// mu per bucket is expansive
-	r.log().Infof(ctx, "Discovering bucket %d", bucketID)
-
-	idToReplicasetRef := r.getIDToReplicaset()
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(idToReplicasetRef))
-
-	type result struct {
-		err error
-		rs  *Replicaset
-	}
-
-	// This works only for go 1.19 or higher. To support older versions
-	// we can use mutex + conditional compilation that checks go version.
-	// Example for conditional compilation: https://www.youtube.com/watch?v=5eQBKqVlNQg
-	var resultAtomic = atomic.Pointer[result]{}
-
-	for rsID, rs := range idToReplicasetRef {
-		go func(rs *Replicaset, rsID uuid.UUID) {
-			defer wg.Done()
-			if _, err := rs.BucketStat(ctx, bucketID); err == nil {
-				// It's ok if several replicasets return ok to bucket_stat command for the same bucketID,
-				// just pick any of them.
-				var res result
-				res.rs, res.err = r.BucketSet(bucketID, rsID)
-				resultAtomic.Store(&res)
-			}
-		}(rs, rsID)
-	}
-
-	wg.Wait()
-
-	res := resultAtomic.Load()
-	if res == nil || res.err != nil || res.rs == nil {
-		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
-	}
-
-	/*
-	   -- All replicasets were scanned, but a bucket was not
-	   -- found anywhere, so most likely it does not exist. It
-	   -- can be wrong, if rebalancing is in progress, and a
-	   -- bucket was found to be RECEIVING on one replicaset, and
-	   -- was not found on other replicasets (it was sent during
-	   -- discovery).
-	*/
-
-	return res.rs, nil
-}
-
-// BucketResolve resolve bucket id to replicaset
-func (r *Router) BucketResolve(ctx context.Context, bucketID uint64) (*Replicaset, error) {
 	if bucketID < 1 || r.cfg.TotalBucketCount < bucketID {
 		return nil, fmt.Errorf("bucket id is out of range: %d (total %d)", bucketID, r.cfg.TotalBucketCount)
 	}
@@ -100,13 +38,57 @@ func (r *Router) BucketResolve(ctx context.Context, bucketID uint64) (*Replicase
 		return rs, nil
 	}
 
-	// Replicaset removed from cluster, perform discovery
-	rs, err := r.BucketDiscovery(ctx, bucketID)
-	if err != nil {
-		return nil, err
+	// it`s ok if in the same time we have few active searches
+	r.log().Infof(ctx, "Discovering bucket %d", bucketID)
+
+	idToReplicasetRef := r.getIDToReplicaset()
+
+	type rsFuture struct {
+		rsID   uuid.UUID
+		future *tarantool.Future
 	}
 
-	return rs, nil
+	var rsFutures = make([]rsFuture, 0, len(idToReplicasetRef))
+	// Send a bunch of parallel requests
+	for rsID, rs := range idToReplicasetRef {
+		rsFutures = append(rsFutures, rsFuture{
+			rsID:   rsID,
+			future: rs.bucketStatAsync(ctx, bucketID),
+		})
+	}
+
+	for _, rsFuture := range rsFutures {
+		if _, err := bucketStatWait(rsFuture.future); err != nil {
+			// just skip, bucket seems do not belong to this replicaset
+			continue
+		}
+
+		// It's ok if several replicasets return ok to bucket_stat command for the same bucketID, just pick any of them.
+		rs, err := r.BucketSet(bucketID, rsFuture.rsID)
+		if err != nil {
+			r.log().Errorf(ctx, "BucketDiscovery: can't set rsID %v for bucketID %d: %v", rsFuture.rsID, bucketID, err)
+			return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+		}
+
+		// TODO: should we release resources for unhandled futures?
+		return rs, nil
+	}
+
+	/*
+	   -- All replicasets were scanned, but a bucket was not
+	   -- found anywhere, so most likely it does not exist. It
+	   -- can be wrong, if rebalancing is in progress, and a
+	   -- bucket was found to be RECEIVING on one replicaset, and
+	   -- was not found on other replicasets (it was sent during
+	   -- discovery).
+	*/
+
+	return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+}
+
+// BucketResolve resolve bucket id to replicaset
+func (r *Router) BucketResolve(ctx context.Context, bucketID uint64) (*Replicaset, error) {
+	return r.BucketDiscovery(ctx, bucketID)
 }
 
 // DiscoveryHandleBuckets arrange downloaded buckets to the route map so as they reference a given replicaset.
