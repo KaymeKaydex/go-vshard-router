@@ -10,6 +10,8 @@ BUG FIXES:
 FEATURES:
 
 * Support new Sprintf-like logging interface (#48)
+* DiscoveryTimeout by default is 1 minute (zero DiscoveryTimeout is not allowed #60)
+* All discovering logs has new prefix [DISCOVERY]
 
 REFACTOR:
 
@@ -17,6 +19,7 @@ REFACTOR:
 * resolve issue #46: drastically simplify RouterMapCallRWImpl and added tests with real tnt
 * Use typed nil pointers instead of memory allocation for EmptyMetrics and emptyLogger structs
 * resolve issue #44: remove bucketCount field from struct Replicaset
+* rename startCronDiscovery to cronDiscovery and make it panic-tolerant
 
 TESTS:
 

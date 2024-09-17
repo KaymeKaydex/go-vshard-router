@@ -3,6 +3,7 @@ package vshard_router //nolint:revive
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -209,31 +210,49 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	return nil
 }
 
-// startCronDiscovery is discovery_service_f analog with goroutines instead fibers
-func (r *Router) startCronDiscovery(ctx context.Context) error {
+// cronDiscovery is discovery_service_f analog with goroutines instead fibers
+func (r *Router) cronDiscovery(ctx context.Context) {
+	var iterationCount uint64
+
 	for {
 		select {
 		case <-ctx.Done():
 			r.metrics().CronDiscoveryEvent(false, 0, "ctx-cancel")
-
-			return ctx.Err()
+			r.log().Infof(ctx, "[DISCOVERY] cron discovery has been stopped after %d iterations", iterationCount)
+			return
 		case <-time.After(r.cfg.DiscoveryTimeout):
-			r.log().Debugf(ctx, "started new cron discovery")
+			iterationCount++
+		}
+
+		// Since the current for loop should not stop until ctx->Done() event fires,
+		// we should be able to continue execution even a panic occures.
+		// Therefore, we should wrap everyting into anonymous function that recovers after panic.
+		// (Similar to pcall in lua/tarantool)
+		func() {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					// Another one panic may happen due to log function below (e.g. bug in log().Errorf), in this case we have two options:
+					// 1. recover again and log nothing: panic will be muted and lost
+					// 2. don't try to recover, we hope that the second panic will be logged somehow by go runtime
+					// So, we choose the second behavior
+					r.log().Errorf(ctx, "[DISCOVERY] something unexpected has happened in cronDiscovery(%d): panic %v, stackstrace: %s",
+						iterationCount, recovered, string(debug.Stack()))
+				}
+			}()
+
+			r.log().Infof(ctx, "[DISCOVERY] started cron discovery iteration %d", iterationCount)
 
 			tStartDiscovery := time.Now()
 
-			defer func() {
-				r.log().Infof(ctx, "discovery done since %s", time.Since(tStartDiscovery))
-			}()
-
-			err := r.DiscoveryAllBuckets(ctx)
-			if err != nil {
+			if err := r.DiscoveryAllBuckets(ctx); err != nil {
 				r.metrics().CronDiscoveryEvent(false, time.Since(tStartDiscovery), "discovery-error")
-
-				r.log().Errorf(ctx, "cant do cron discovery with error: %s", err)
+				r.log().Errorf(ctx, "[DISCOVERY] cant do cron discovery iteration %d with error: %s", iterationCount, err)
+				return
 			}
 
+			r.log().Infof(ctx, "[DISCOVERY] finished cron discovery iteration %d", iterationCount)
+
 			r.metrics().CronDiscoveryEvent(true, time.Since(tStartDiscovery), "ok")
-		}
+		}()
 	}
 }
