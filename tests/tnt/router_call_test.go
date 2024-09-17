@@ -57,10 +57,10 @@ func TestRouterCallProto(t *testing.T) {
 	require.NotNil(t, err, "RouterCallImpl echo finised with nil args")
 
 	_, _, err = router.RouterCallImpl(ctx, bucketID, callOpts, "raise_luajit_error", args)
-	require.IsType(t, &vshardrouter.StorageCallAssertError{}, err, "RouterCallImpl raise_luajit_error finished with StorageCallAssertError")
+	require.NotNil(t, err, "RouterCallImpl raise_luajit_error finished with err")
 
 	_, _, err = router.RouterCallImpl(ctx, bucketID, callOpts, "raise_client_error", args)
-	require.IsType(t, &vshardrouter.StorageCallAssertError{}, err, "RouterCallImpl raise_client_error finished with StorageCallAssertError")
+	require.NotNil(t, err, "RouterCallImpl raise_client_error finished with err")
 
 	// maxRespLen is due to:
 	// https://github.com/tarantool/vshard/blob/dfa2cc8a2aff221d5f421298851a9a229b2e0434/vshard/storage/init.lua#L3130

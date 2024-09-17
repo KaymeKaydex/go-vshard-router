@@ -17,6 +17,7 @@ FEATURES:
 * All discovering logs has new prefix [DISCOVERY]
 * Introduce Replicaset.CallAsync, it is usefull to send concurrent requests to replicasets;
 	additionally, CallAsync provides new interface to interact with replicaset without cons of interface of ReplicaCall
+* Retry tarantool request only on some vshard errors (#66)
 
 REFACTOR:
 
@@ -28,6 +29,7 @@ REFACTOR:
 * BucketStat: split into bucketStatAsync and bucketStatWait parts
 * BucketDiscovery: do not spawn goroutines, just use futures in the single goroutine
 * BucketResolve: make it alias for BucketDiscovery
+* do not export anymore storageCallAssertError, bucketStatError
 
 TESTS:
 

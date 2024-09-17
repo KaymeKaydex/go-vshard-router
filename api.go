@@ -27,7 +27,7 @@ func (c VshardMode) String() string {
 	return string(c)
 }
 
-type StorageCallAssertError struct {
+type storageCallAssertError struct {
 	Code     int         `msgpack:"code"`
 	BaseType string      `msgpack:"base_type"`
 	Type     string      `msgpack:"type"`
@@ -35,8 +35,9 @@ type StorageCallAssertError struct {
 	Trace    interface{} `msgpack:"trace"`
 }
 
-func (s StorageCallAssertError) Error() string {
-	return fmt.Sprintf("vshard.storage.call assert error code: %d, type:%s, message: %s", s.Code, s.Type, s.Message)
+func (s storageCallAssertError) Error() string {
+	type alias storageCallAssertError
+	return fmt.Sprintf("%+v", alias(s))
 }
 
 type StorageCallVShardError struct {
@@ -51,7 +52,11 @@ type StorageCallVShardError struct {
 }
 
 func (s StorageCallVShardError) Error() string {
-	return fmt.Sprintf("vshard.storage.call bucket error bucket_id: %d, reason: %s, name: %s", s.BucketID, s.Reason, s.Name)
+	// Just print struct as is, use hack with alias type to avoid recursion:
+	// %v attempts to call Error() method for s, which is recursion.
+	// This alias doesn't have method Error().
+	type alias StorageCallVShardError
+	return fmt.Sprintf("%+v", alias(s))
 }
 
 type StorageResultTypedFunc = func(result interface{}) error
@@ -76,6 +81,8 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 	fnc string,
 	args interface{}) (interface{}, StorageResultTypedFunc, error) {
 
+	const vshardStorageClientCall = "vshard.storage.call"
+
 	if bucketID < 1 || r.cfg.TotalBucketCount < bucketID {
 		return nil, nil, fmt.Errorf("bucket id is out of range: %d (total %d)", bucketID, r.cfg.TotalBucketCount)
 	}
@@ -87,7 +94,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 	timeout := opts.Timeout
 	timeStart := time.Now()
 
-	req := tarantool.NewCallRequest("vshard.storage.call")
+	req := tarantool.NewCallRequest(vshardStorageClientCall)
 	req = req.Context(ctx)
 	req = req.Args([]interface{}{
 		bucketID,
@@ -97,6 +104,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 	})
 
 	var err error
+	var vshardError StorageCallVShardError
 
 	for {
 		if since := time.Since(timeStart); since > timeout {
@@ -114,10 +122,9 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		rs, err = r.BucketResolve(ctx, bucketID)
 		if err != nil {
-			r.log().Debugf(ctx, "cant resolve bucket %d with error: %s", bucketID, err.Error())
-
 			r.metrics().RetryOnCall("bucket_resolve_error")
-			continue
+
+			return nil, nil, fmt.Errorf("cant resolve bucket %d: %w", bucketID, err)
 		}
 
 		r.log().Infof(ctx, "try call %s on replicaset %s for bucket %d", fnc, rs.info.Name, bucketID)
@@ -127,97 +134,73 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		var respData []interface{}
 		respData, err = future.Get()
 		if err != nil {
-			r.log().Errorf(ctx, "got future error: %s", err)
 			r.metrics().RetryOnCall("future_get_error")
 
-			continue
+			return nil, nil, fmt.Errorf("got error on future.Get(): %w", err)
 		}
 
-		r.log().Debugf(ctx, "got call result response data %s", respData)
+		r.log().Debugf(ctx, "got call result response data %v", respData)
 
-		if len(respData) < 1 {
+		if len(respData) == 0 {
 			// vshard.storage.call(func) returns up to two values:
-			// - true/false
+			// - true/false/nil
 			// - func result, omitted if func does not return anything
-			err = fmt.Errorf("invalid length of response data: must be >= 1, current: %d", len(respData))
-
-			r.log().Errorf(ctx, "%s", err.Error())
-
 			r.metrics().RetryOnCall("resp_data_error")
-			continue
+
+			return nil, nil, fmt.Errorf("protocol violation %s: got empty response", vshardStorageClientCall)
 		}
 
 		if respData[0] == nil {
-			vshardErr := &StorageCallVShardError{}
-
-			if len(respData) < 2 {
-				err = fmt.Errorf("unexpected response length when respData[0] == nil: %d", len(respData))
-			} else {
-				err = mapstructure.Decode(respData[1], vshardErr)
+			if len(respData) != 2 {
+				return nil, nil, fmt.Errorf("protocol violation %s: length is %d when respData[0] is nil", vshardStorageClientCall, len(respData))
 			}
 
+			err = mapstructure.Decode(respData[1], &vshardError)
 			if err != nil {
+				// Something unexpected happened: we couldn't decode respData[1] as a vshardError,
+				// so return reason why and respData[1], that is supposed to be a vshardError.
 				r.metrics().RetryOnCall("internal_error")
 
-				err = fmt.Errorf("cant decode vhsard err by trarantool with err: %s; continue try", err)
-
-				r.log().Errorf(ctx, "%s", err.Error())
-				continue
+				return nil, nil, fmt.Errorf("cant decode vhsard err by trarantool with err: %v (%v)", err, respData[1])
 			}
 
-			err = vshardErr
-
-			r.log().Errorf(ctx, "got vshard storage call error: %s", err)
-
-			if vshardErr.Name == "WRONG_BUCKET" ||
-				vshardErr.Name == "BUCKET_IS_LOCKED" ||
-				vshardErr.Name == "TRANSFER_IS_IN_PROGRESS" {
+			switch vshardError.Name {
+			case "WRONG_BUCKET", "BUCKET_IS_LOCKED", "TRANSFER_IS_IN_PROGRESS":
 				r.BucketReset(bucketID)
 				r.metrics().RetryOnCall("bucket_migrate")
 
-				r.log().Debugf(ctx, "retrying cause bucket in migrate state (%s)", vshardErr.Name)
+				r.log().Debugf(ctx, "retrying %s cause bucket in migrate state (%s)", fnc, vshardError.Error())
 
+				// this vshardError will be returned to a caller in case of timeout
+				err = &vshardError
 				continue
 			}
 
-			continue
+			return nil, nil, &vshardError
 		}
 
-		isVShardRespOk := false
+		var isVShardRespOk bool
 		err = future.GetTyped(&[]interface{}{&isVShardRespOk})
 		if err != nil {
-			r.log().Debugf(ctx, "cant get typed with err: %s", err)
-
-			continue
+			return nil, nil, fmt.Errorf("protocol violation %s: can't decode respData[0] as boolean: %v", vshardStorageClientCall, err)
 		}
 
-		if !isVShardRespOk { // error
-			errorResp := &StorageCallAssertError{}
-
-			// Since we got respData[0] == false, it means that assert has happened
+		if !isVShardRespOk {
+			// Since we got respData[0] == false, it means that an error has happened
 			// while executing user-defined function on vshard storage.
 			// In this case, vshard storage must return a pair: false, error.
-			if len(respData) < 2 {
-				err = fmt.Errorf("protocol violation: unexpected response length when respData[0] == false: %d", len(respData))
-			} else {
-				err = future.GetTyped(&[]interface{}{&isVShardRespOk, errorResp})
+			if len(respData) != 2 {
+				return nil, nil, fmt.Errorf("protocol violation %s: response length is %d when respData[0] is false", vshardStorageClientCall, len(respData))
 			}
 
+			var assertError storageCallAssertError
+			err = mapstructure.Decode(respData[1], &assertError)
 			if err != nil {
-				// Either protocol has been violated or decoding has failed.
-				err = fmt.Errorf("cant get typed vshard err with err: %s", err)
-			} else {
-				// StorageCallAssertError successfully has been decoded.
-				err = errorResp
+				// We could not decode respData[1] as assertError, so return respData[1] as is, add info why we could not decode.
+				return nil, nil, fmt.Errorf("%s: %s failed %v (decoding to assertError failed %v)", vshardStorageClientCall, fnc, respData[1], err)
 			}
 
-			if errorResp.Type == "ClientError" || errorResp.Type == "LuajitError" {
-				return nil, nil, errorResp
-			}
-
-			r.log().Debugf(ctx, "retry cause vhsard response not ok: %s", errorResp)
-
-			continue
+			return nil, nil, fmt.Errorf("%s: %s failed: %+v", vshardStorageClientCall, fnc, assertError)
 		}
 
 		r.metrics().RequestDuration(time.Since(timeStart), true, false)
@@ -363,14 +346,14 @@ func (r *Router) RouterMapCallRWImpl(
 				return nil, fmt.Errorf("protocol violation: invalid respData length when respData[0] == nil, must be = 2, current: %d", len(respData))
 			}
 
-			assertError := &StorageCallAssertError{}
-			err = mapstructure.Decode(respData[1], assertError)
+			var assertError storageCallAssertError
+			err = mapstructure.Decode(respData[1], &assertError)
 			if err != nil {
-				// TODO: not only StorageCallAssertError is possible here?
+				// We could not decode respData[1] as assertError, so return respData[1] as is, add info why we could not decode.
 				return nil, fmt.Errorf("storage_map failed on %v: %+v (decoding to assertError failed %v)", rsFuture.uuid, respData[1], err)
 			}
 
-			return nil, fmt.Errorf("storage_map failed on %v: %w", rsFuture.uuid, assertError)
+			return nil, fmt.Errorf("storage_map failed on %v: %+v", rsFuture.uuid, assertError)
 		}
 
 		var isVShardRespOk bool

@@ -224,7 +224,7 @@ var Errors = map[int]Error{
 	},
 }
 
-type BucketStatError struct {
+type bucketStatError struct {
 	BucketID uint64 `msgpack:"bucket_id"`
 	Reason   string `msgpack:"reason"`
 	Code     int    `msgpack:"code"`
@@ -233,6 +233,7 @@ type BucketStatError struct {
 	Name     string `msgpack:"name"`
 }
 
-func (bse BucketStatError) Error() string {
-	return "todo"
+func (bse bucketStatError) Error() string {
+	type alias bucketStatError
+	return fmt.Sprintf("%+v", alias(bse))
 }

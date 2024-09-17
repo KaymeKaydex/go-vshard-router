@@ -60,22 +60,20 @@ func bucketStatWait(future *tarantool.Future) (BucketStatInfo, error) {
 		return bsInfo, err
 	}
 
-	if len(respData) < 1 {
-		return bsInfo, fmt.Errorf("respData len is 0 for bucketStatWait; unsupported or broken proto")
+	if len(respData) == 0 {
+		return bsInfo, fmt.Errorf("protocol violation bucketStatWait: empty response")
 	}
 
 	if respData[0] == nil {
-
-		if len(respData) < 2 {
-			return bsInfo, fmt.Errorf("respData len < 2 when respData[0] is nil for bucketStatWait")
+		if len(respData) != 2 {
+			return bsInfo, fmt.Errorf("protocol violation bucketStatWait: invalid response length %d when respData[0] is nil", len(respData))
 		}
 
-		var tmp interface{} // todo: fix non-panic crutch
-		bsError := &BucketStatError{}
-
-		err := future.GetTyped(&[]interface{}{tmp, bsError})
+		var bsError bucketStatError
+		err = mapstructure.Decode(respData[1], &bsError)
 		if err != nil {
-			return bsInfo, err
+			// We could not decode respData[1] as bsError, so return respData[1] as is, add info why we could not decode.
+			return bsInfo, fmt.Errorf("bucketStatWait error: %v (can't decode into bsError: %v)", respData[1], err)
 		}
 
 		return bsInfo, bsError
@@ -106,8 +104,6 @@ func (rs *Replicaset) ReplicaCall(
 		timeout = opts.Timeout
 	}
 
-	timeStart := time.Now()
-
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -115,33 +111,21 @@ func (rs *Replicaset) ReplicaCall(
 		Context(ctx).
 		Args(args)
 
-	var (
-		respData []interface{}
-		err      error
-	)
+	future := rs.conn.Do(req, opts.PoolMode)
 
-	for {
-		if since := time.Since(timeStart); since > timeout {
-			return nil, nil, err
-		}
-
-		future := rs.conn.Do(req, opts.PoolMode)
-
-		respData, err = future.Get()
-		if err != nil {
-			continue
-		}
-
-		if len(respData) == 0 {
-			// Since this method returns the first element of respData by contract, we can't return anything is this case (broken interface)
-			err = fmt.Errorf("response data is empty")
-			continue
-		}
-
-		return respData[0], func(result interface{}) error {
-			return future.GetTyped(&[]interface{}{&result})
-		}, nil
+	respData, err := future.Get()
+	if err != nil {
+		return nil, nil, fmt.Errorf("got error on future.Get(): %w", err)
 	}
+
+	if len(respData) == 0 {
+		// Since this method returns the first element of respData by contract, we can't return anything is this case (broken interface)
+		return nil, nil, fmt.Errorf("%s response data is empty", fnc)
+	}
+
+	return respData[0], func(result interface{}) error {
+		return future.GetTyped(&[]interface{}{&result})
+	}, nil
 }
 
 // Call sends async request to remote storage
