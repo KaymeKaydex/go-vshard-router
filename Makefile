@@ -1,4 +1,4 @@
-TEST_TIMEOUT?=20s
+TEST_TIMEOUT?=100s
 EXTENDED_TEST_TIMEOUT=1m
 GO_CMD?=go
 LOCAL_BIN:=$(CURDIR)/bin
@@ -14,10 +14,16 @@ ifeq ($(wildcard $(GOLANGCI_BIN)),)
 	$(GO_CMD) install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_TAG)
 endif
 
-test:
-	$(GO_CMD) test ./... -parallel=10 -timeout=$(TEST_TIMEOUT) -coverprofile=coverage.out.tmp
+prepare-tnt:
+	@$(MAKE) -C ./tests/tnt prepare
+
+test: prepare-tnt
+	export START_PORT=33000
+	export NREPLICASETS=5
+	$(GO_CMD) test ./... -race -parallel=10 -timeout=$(TEST_TIMEOUT) -covermode=atomic -coverprofile=coverage.out.tmp -coverpkg="./..."
 	@cat coverage.out.tmp | grep -v "mock" > coverage.out
 	@rm coverage.out.tmp
+	@$(MAKE) -C ./tests/tnt cluster-down
 
 cover: test
 	 $(GO_CMD) tool cover -html=coverage.out

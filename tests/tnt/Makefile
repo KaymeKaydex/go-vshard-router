@@ -1,3 +1,8 @@
+# TTCTL is tararantool control util (tt or tarantoolctl)
+TTCTL := tt
+SHELL := /bin/bash
+
+
 export NREPLICASETS:=5
 export START_PORT:=33000
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY:=YES # See review comments for PR #56 why
@@ -11,8 +16,12 @@ default: run
 
 all: default
 
-run: | clean cluster-up bootstrap gotest cluster-down
+prepare: deps clean cluster-up bootstrap
 
+run: | prepare gotest cluster-down
+
+deps:
+	$(TTCTL) rocks install vshard 0.1.26
 # cleanup tmp working directory
 clean:
 	@echo "${GREEN}STAGE: CLEANUP${NC}"
@@ -54,7 +63,7 @@ cluster-down:
 # run go tests, minus "-" signs before command allows failures, otherwise cluster-down stage won't run.
 gotest:
 	@echo "${GREEN}STAGE: RUN GOTESTS${NC}"
-	-go test -race -parallel=20 -coverpkg="../../" -coverprofile cover.out -timeout=90s
+	go test -race -parallel=20 -coverpkg="../../" -coverprofile cover.out -timeout=90s
 
 open-coverage:
 	go tool cover -html=cover.out

@@ -1,7 +1,8 @@
 #!/usr/bin/env tarantool
 
 require('strict').on()
-fiber = require('fiber')
+local fiber = require('fiber')
+rawset(_G, 'fiber', fiber) -- set fiber as global
 
 -- Check if we are running under test-run
 if os.getenv('ADMIN') then
@@ -29,6 +30,8 @@ end
 cfg.bucket_count = 10000
 
 -- Start the database with sharding
-vshard = require('vshard')
+local vshard = require 'vshard'
+rawset(_G, 'vshard', vshard) -- set vshard as global
+
 vshard.router.cfg(cfg)
 

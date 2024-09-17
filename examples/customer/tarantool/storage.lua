@@ -28,7 +28,9 @@ replicasets = {'cbf06940-0790-498b-948d-042b62cf3d29',
                'ac522f65-aa94-4134-9f64-51ee384f1a54'}
 
 -- Start the database with sharding
-vshard = require('vshard')
+local vshard = require 'vshard'
+rawset(_G, 'vshard', vshard) -- set as global variable
+
 vshard.storage.cfg(cfg, names[NAME])
 
 box.once('access:v1', function()

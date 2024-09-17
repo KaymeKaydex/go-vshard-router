@@ -10,43 +10,84 @@ on:
     branches: [ "master" ]
 
 jobs:
+  all-tests:
+    # We could replace it with ubuntu-latest after fixing the bug:
+    # https://github.com/tarantool/setup-tarantool/issues/37
+    runs-on: ubuntu-20.04
 
-  test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        golang:
+          - '1.20'
+          - 'stable'
+        tarantool:
+          - '2.8'
+          - '2.10'
+          - 'master'
+        include:
+          - tarantool: 'master'
+            golang: '1.20'
+            coverage: true
+
     steps:
-    - uses: actions/checkout@v3
+      - name: Clone the connector
+        uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
+      - name: Setup tt
+        run: |
+          curl -L https://tarantool.io/release/2/installer.sh | sudo bash
+          sudo apt install -y tt
 
-    - name: Test
-      run: make test
+      - name: Setup tt environment
+        run: tt init
 
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v4.0.1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        slug: KaymeKaydex/go-vshard-router
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-go@v2
-
-      - uses: actions/checkout@v2
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        continue-on-error: true
+      - name: Setup Tarantool ${{ matrix.tarantool }}
+        if: matrix.tarantool != 'master'
+        uses: tarantool/setup-tarantool@v2
         with:
-          # The first run is for GitHub Actions error format.
-          args: --config=.golangci.yaml
+          tarantool-version: ${{ matrix.tarantool }}
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - name: Get Tarantool master commit
+        if: matrix.tarantool == 'master'
+        run: |
+          commit_hash=$(git ls-remote https://github.com/tarantool/tarantool.git --branch master | head -c 8)
+          echo "LATEST_COMMIT=${commit_hash}" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Cache Tarantool master
+        if: matrix.tarantool == 'master'
+        id: cache-latest
+        uses: actions/cache@v3
         with:
-          # The second run is for human-readable error format with a file name
-          # and a line number.
-          args: --out-${NO_FUTURE}format colored-line-number --config=.golangci.yaml
+          path: |
+            ${{ github.workspace }}/bin
+            ${{ github.workspace }}/include
+          key: cache-latest-${{ env.LATEST_COMMIT }}
+
+      - name: Setup Tarantool master
+        if: matrix.tarantool == 'master' && steps.cache-latest.outputs.cache-hit != 'true'
+        run: |
+          sudo tt install tarantool master
+
+      - name: Add Tarantool master to PATH
+        if: matrix.tarantool == 'master'
+        run: echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
+
+      - name: Setup golang for the connector and tests
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.golang }}
+
+      - name: Run tests
+        run: |
+          export START_PORT=33000
+          export NREPLICASETS=5
+          make test
+
+      - name: Upload coverage reports to Codecov
+        if: ${{ matrix.coverage }}
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: KaymeKaydex/go-vshard-router
