@@ -175,6 +175,8 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 				r.BucketReset(bucketID)
 				r.metrics().RetryOnCall("bucket_migrate")
 
+				r.log().Debugf(ctx, "retrying cause bucket in migrate state (%s)", vshardErr.Name)
+
 				continue
 			}
 
@@ -208,6 +210,12 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 				// StorageCallAssertError successfully has been decoded.
 				err = errorResp
 			}
+
+			if errorResp.Type == "ClientError" || errorResp.Type == "LuajitError" {
+				return nil, nil, errorResp
+			}
+
+			r.log().Debugf(ctx, "retry cause vhsard response not ok: %s", errorResp)
 
 			continue
 		}
