@@ -30,7 +30,8 @@ func (r *Router) NewCallRequest(function string) *CallRequest {
 	return req
 }
 
-// Do perform a request asynchronously on the connection.
+// Do perform a request synchronously on the connection.
+// It is important that the logic of this method is different from go-tarantool.
 func (r *Router) Do(req *CallRequest, userMode pool.Mode) *CallResponse {
 	ctx := req.ctx
 	bucketID := req.bucketID
