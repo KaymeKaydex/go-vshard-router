@@ -106,6 +106,8 @@ type Config struct {
 	// This is useful if you use middleware that inserts the calculated bucket id into the request context.
 	BucketGetter func(ctx context.Context) uint64
 	// RequestTimeout timeout for requests to Tarantool.
+	// Don't rely on using this timeout.
+	// Currently, it only works for sugar implementations and works as a retry timeout.
 	RequestTimeout time.Duration
 }
 
