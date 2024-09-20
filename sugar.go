@@ -37,6 +37,16 @@ func (r *Router) Do(req *CallRequest, userMode pool.Mode) *CallResponse {
 	bucketID := req.bucketID
 	resp := new(CallResponse)
 
+	if req.fnc == "" {
+		resp.err = fmt.Errorf("func name is empty")
+		return resp
+	}
+
+	if req.args == nil {
+		resp.err = fmt.Errorf("no request args")
+		return resp
+	}
+
 	if req.bucketID == 0 {
 		if r.cfg.BucketGetter == nil {
 			resp.err = fmt.Errorf("bucket id for request is not set")
