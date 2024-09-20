@@ -190,43 +190,13 @@ Service with go-vshard-router on top of the tarantool example from the original 
 
 ## Benchmarks
 ### Go Bench
-<table>
-  <tr>
-    <th>Benchmark</th>
-    <th>Runs</th>
-    <th>Time (ns/op)</th>
-    <th>Memory (B/op)</th>
-    <th>Allocations (allocs/op)</th>
-  </tr>
-  <tr>
-    <td>BenchmarkCallSimpleInsert_GO-8</td>
-    <td>9844</td>
-    <td style="background-color: green;">114596</td>
-    <td style="background-color: red;">1894</td>
-    <td style="background-color: red;>41</td>
-  </tr>
-  <tr>
-    <td>BenchmarkCallSimpleInsert_Lua-8</td>
-    <td>7587</td>
-    <td style="background-color: red;">156181</td>
-    <td style="background-color: green;">1101</td>
-    <td style="background-color: green;">19</td>
-  </tr>
-  <tr>
-    <td>BenchmarkCallSimpleSelect_GO-8</td>
-    <td>16350</td>
-    <td style="background-color: green;">75770</td>
-    <td style="background-color: red;">2827</td>
-    <td style="background-color: red;">60</td>
-  </tr>
-  <tr>
-    <td>BenchmarkCallSimpleSelect_Lua-8</td>
-    <td>10060</td>
-    <td style="background-color: red;">116768</td>
-    <td style="background-color: green;">1610</td>
-    <td style="background-color: green;">28</td>
-  </tr>
-</table>
+
+| Benchmark                            | Runs   | Time (ns/op) | Memory (B/op) | Allocations (allocs/op) |
+|-------------------------------------|--------|---------------|----------------|--------------------------|
+| BenchmarkCallSimpleInsert_GO-8     | 9844   | 114596        | 1894           | 41                       |
+| BenchmarkCallSimpleInsert_Lua-8    | 7587   | 156181        | 1101           | 19                       |
+| BenchmarkCallSimpleSelect_GO-8     | 16350  | 75770         | 2827           | 60                       |
+| BenchmarkCallSimpleSelect_Lua-8    | 10060  | 116768        | 1610           | 28                       |
 
 
 ### [K6](https://github.com/grafana/k6)
