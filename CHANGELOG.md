@@ -24,6 +24,9 @@ REFACTOR:
 * Use typed nil pointers instead of memory allocation for EmptyMetrics and emptyLogger structs
 * resolve issue #44: remove bucketCount field from struct Replicaset
 * rename startCronDiscovery to cronDiscovery and make it panic-tolerant
+* BucketStat: split into bucketStatAsync and bucketStatWait parts
+* BucketDiscovery: do not spawn goroutines, just use futures in the single goroutine
+* BucketResolve: make it alias for BucketDiscovery
 
 TESTS:
 

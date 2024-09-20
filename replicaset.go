@@ -35,28 +35,39 @@ func (rs *Replicaset) String() string {
 }
 
 func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
-	const bucketStatFnc = "vshard.storage.bucket_stat"
+	future := rs.bucketStatAsync(ctx, bucketID)
 
-	var bsInfo BucketStatInfo
+	return bucketStatWait(future)
+}
+
+func (rs *Replicaset) bucketStatAsync(ctx context.Context, bucketID uint64) *tarantool.Future {
+	const bucketStatFnc = "vshard.storage.bucket_stat"
 
 	req := tarantool.NewCallRequest(bucketStatFnc).
 		Args([]interface{}{bucketID}).
 		Context(ctx)
 
 	future := rs.conn.Do(req, pool.RO)
+
+	return future
+}
+
+func bucketStatWait(future *tarantool.Future) (BucketStatInfo, error) {
+	var bsInfo BucketStatInfo
+
 	respData, err := future.Get()
 	if err != nil {
 		return bsInfo, err
 	}
 
 	if len(respData) < 1 {
-		return bsInfo, fmt.Errorf("respData len is 0 for %s; unsupported or broken proto", bucketStatFnc)
+		return bsInfo, fmt.Errorf("respData len is 0 for bucketStatWait; unsupported or broken proto")
 	}
 
 	if respData[0] == nil {
 
 		if len(respData) < 2 {
-			return bsInfo, fmt.Errorf("respData len < 2 when respData[0] is nil for %s", bucketStatFnc)
+			return bsInfo, fmt.Errorf("respData len < 2 when respData[0] is nil for bucketStatWait")
 		}
 
 		var tmp interface{} // todo: fix non-panic crutch
