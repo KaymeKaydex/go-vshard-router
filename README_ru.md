@@ -190,10 +190,44 @@ func main() {
 
 ## Бенчмарки
 ### Go Bench
-| Бенчмарк                              | Количество | Время (ns/op) | Память (B/op) | Аллокации (allocs/op) |
-|----------------------------------------|------------|----------------|----------------|-----------------------|
-| BenchmarkCallSimpleInsert_GO-8        | 3135       | 351550         | 158556         | 596                   |
-| BenchmarkCallSimpleInsert_Lua-8       | 2410       | 639645         | 252073         | 907                   |
+
+<table>
+  <tr>
+    <th>Бенчмарк</th>
+    <th>Запусков</th>
+    <th>Время (ns/op)</th>
+    <th>Память (B/op)</th>
+    <th>Аллокации (allocs/op)</th>
+  </tr>
+  <tr>
+    <td>BenchmarkCallSimpleInsert_GO-8</td>
+    <td>9844</td>
+    <td style="background-color: green;">114596</td>
+    <td style="background-color: red;">1894</td>
+    <td style="background-color: red;">41</td>
+  </tr>
+  <tr>
+    <td>BenchmarkCallSimpleInsert_Lua-8</td>
+    <td>7587</td>
+    <td style="background-color: red;">156181</td>
+    <td style="background-color: green;">1101</td>
+    <td style="background-color: green;">19</td>
+  </tr>
+  <tr>
+    <td>BenchmarkCallSimpleSelect_GO-8</td>
+    <td>16350</td>
+    <td style="background-color: green;">75770</td>
+    <td style="background-color: red;">2827</td>
+    <td style="background-color: red;">60</td>
+  </tr>
+  <tr>
+    <td>BenchmarkCallSimpleSelect_Lua-8</td>
+    <td>10060</td>
+    <td style="background-color: red;">116768</td>
+    <td style="background-color: green;">1610</td>
+    <td style="background-color: green;">28</td>
+  </tr>
+</table>
 
 ### [K6](https://github.com/grafana/k6)
 

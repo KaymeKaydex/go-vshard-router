@@ -114,6 +114,16 @@ function product_add(product)
     return true
 end
 
+-- product_get - simple select for benches
+function product_get(req)
+    local product = box.space.products:get(uuid.fromstr(req.id))
+
+    return {
+        name = product.name,
+        id = product.id:str()
+    }
+end
+
 function customer_add(customer)
     box.begin()
     box.space.customer:insert({customer.customer_id, customer.bucket_id,

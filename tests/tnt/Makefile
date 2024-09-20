@@ -75,3 +75,6 @@ enter:
 
 enter-proxy:
 	tarantoolctl connect 0.0.0.0:12000
+
+bench:
+	 go test -bench=. -benchmem
