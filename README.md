@@ -189,11 +189,21 @@ Learn with th [Quick Start](docs/doc.md), which include  examples and theory.
 Service with go-vshard-router on top of the tarantool example from the original vshard library using raft
 
 ## Benchmarks
-Topology: 
+### Go Bench
+
+| Benchmark                            | Runs   | Time (ns/op) | Memory (B/op) | Allocations (allocs/op) |
+|-------------------------------------|--------|---------------|----------------|--------------------------|
+| BenchmarkCallSimpleInsert_GO-8     | 9844   | 114596        | 1894           | 41                       |
+| BenchmarkCallSimpleInsert_Lua-8    | 7587   | 156181        | 1101           | 19                       |
+| BenchmarkCallSimpleSelect_GO-8     | 16350  | 75770         | 2827           | 60                       |
+| BenchmarkCallSimpleSelect_Lua-8    | 10060  | 116768        | 1610           | 28                       |
+
+
+### [K6](https://github.com/grafana/k6)
+Topology:
 - 4 replicasets (x2 instances per rs)
 - 4 tarantool proxy
 - 1 golang service
-### [K6](https://github.com/grafana/k6)
 
 constant VUes scenario:
 at a load close to production

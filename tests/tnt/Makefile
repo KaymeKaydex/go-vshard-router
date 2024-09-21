@@ -59,6 +59,8 @@ cluster-down:
 		kill -9 `cat  tmp/$${rsid}/follower/tarantool.pid`;		\
 		((rsid = rsid + 1)) ; \
 	done
+	kill -9 `cat tmp/router_work_dir/router.pid`
+	rm -rf tmp
 
 # run go tests, minus "-" signs before command allows failures, otherwise cluster-down stage won't run.
 gotest:
@@ -67,3 +69,12 @@ gotest:
 
 open-coverage:
 	go tool cover -html=cover.out
+
+enter:
+	tarantoolctl connect storage:storage@0.0.0.0:33002
+
+enter-proxy:
+	tarantoolctl connect 0.0.0.0:12000
+
+bench:
+	 go test -bench=. -benchmem

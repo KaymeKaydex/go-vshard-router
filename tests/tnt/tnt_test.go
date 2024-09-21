@@ -44,7 +44,7 @@ func isCorrectRun() bool {
 	return true
 }
 
-func skipOnInvalidRun(t *testing.T) {
+func skipOnInvalidRun(t testing.TB) {
 	if !isCorrectRun() {
 		log.Printf("Incorrect run of tnt-test framework")
 

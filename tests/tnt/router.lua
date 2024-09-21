@@ -22,8 +22,32 @@ local clustercfg = cfgmaker.clustercfg(start_port, nreplicasets)
 
 clustercfg['bucket_count'] = 100
 
+clustercfg.listen = "0.0.0.0:12000"
+clustercfg.background = true
+clustercfg.log="router"..".log"
+clustercfg.pid_file="router"..".pid"
+
 local router = vshard.router.new('router', clustercfg)
+
+box.once('access:v1', function()
+    box.schema.user.grant('guest', 'read,write,execute', 'universe')
+end)
 
 router:bootstrap({timeout = 4, if_not_bootstrapped = true})
 
-os.exit(0)
+local api = {}
+
+function api.add_product(product)
+    local bucket_id = router:bucket_id_strcrc32(product.id)
+    product.bucket_id = bucket_id
+
+    return router:call(bucket_id, 'write', 'product_add', {product})
+end
+
+function api.get_product(req)
+    local bucket_id = router:bucket_id_strcrc32(req.id)
+
+    return router:call(bucket_id, 'read', 'product_get', {req})
+end
+
+rawset(_G, 'api', api)

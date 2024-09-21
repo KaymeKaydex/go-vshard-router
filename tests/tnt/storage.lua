@@ -7,6 +7,7 @@ local debug = require('debug')
 local fiber = require('fiber')
 local math = require('math')
 local os = require('os')
+local uuid = require('uuid')
 
 -- vshard must be global, not local. Otherwise it does not work.
 local vshard = require 'vshard'
@@ -61,6 +62,17 @@ box.once("testapp:schema:1", function()
     customer:create_index('customer_id', {parts = {'customer_id'}})
     customer:create_index('bucket_id', {parts = {'bucket_id'}, unique = false})
 
+    -- create products for easy bench
+	local products = box.schema.space.create('products')
+    products:format({
+        {'id', 'uuid'},
+        {'bucket_id', 'unsigned'},
+        {'name', 'string'},
+        {'count', 'unsigned'},
+    })
+    products:create_index('id', {parts = {'id'}})
+
+
     local account = box.schema.space.create('account')
     account:format({
         {'account_id', 'unsigned'},
@@ -88,8 +100,29 @@ box.once("testapp:schema:1", function()
     box.schema.role.grant('public', 'execute', 'function', 'raise_client_error')
 
     box.schema.user.grant('storage', 'super')
+    box.schema.user.create('tarantool')
+    box.schema.user.grant('tarantool', 'super')
 end)
 
+
+-- product_add - simple add some product to storage
+function product_add(product)
+    local id = uuid.fromstr(product.id)
+
+    box.space.products:insert({ id, product.bucket_id, product.name, product.count})
+
+    return true
+end
+
+-- product_get - simple select for benches
+function product_get(req)
+    local product = box.space.products:get(uuid.fromstr(req.id))
+
+    return {
+        name = product.name,
+        id = product.id:str()
+    }
+end
 
 function customer_add(customer)
     box.begin()
