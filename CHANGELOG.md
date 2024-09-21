@@ -8,6 +8,7 @@ BUG FIXES:
 * BucketStat: decode bsInfo by ptr
 * ReplicaCall: fix decoding response (#42)
 * ReplicaCall: fix ignoring timeout while waiting for future.Get()
+* Fix retry on Client or LuaJit error
 
 FEATURES:
 
@@ -40,6 +41,7 @@ TESTS:
   * implemented luacheck for static checks
 * New tnt tests for ReplicaCall
 * New tnt tests for CallAsync
+* Init Go benches for tests/tnt
 
 EXAMPLES:
 * customer go mod fixed 
