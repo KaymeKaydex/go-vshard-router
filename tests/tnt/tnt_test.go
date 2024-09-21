@@ -1,7 +1,9 @@
-package tnt_test
+package tnt
 
 import (
 	"fmt"
+	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"testing"
@@ -42,6 +44,14 @@ func isCorrectRun() bool {
 	return true
 }
 
+func skipOnInvalidRun(t testing.TB) {
+	if !isCorrectRun() {
+		log.Printf("Incorrect run of tnt-test framework")
+
+		t.Skip("skipped cause env invalid")
+	}
+}
+
 func getCfg() map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo {
 	c := cfgmaker{
 		nreplicasets: getEnvInt(envNreplicasetsKey),
@@ -49,6 +59,11 @@ func getCfg() map[vshardrouter.ReplicasetInfo][]vshardrouter.InstanceInfo {
 	}
 
 	return c.clusterCfg()
+}
+
+func randBucketID(totalBucketCount uint64) uint64 {
+	//nolint:gosec
+	return (rand.Uint64() % totalBucketCount) + 1
 }
 
 func TestConcurrentRouterCall(t *testing.T) {

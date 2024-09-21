@@ -76,7 +76,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 	fnc string,
 	args interface{}) (interface{}, StorageResultTypedFunc, error) {
 
-	if bucketID > r.cfg.TotalBucketCount {
+	if bucketID < 1 || r.cfg.TotalBucketCount < bucketID {
 		return nil, nil, fmt.Errorf("bucket id is out of range: %d (total %d)", bucketID, r.cfg.TotalBucketCount)
 	}
 
@@ -175,6 +175,8 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 				r.BucketReset(bucketID)
 				r.metrics().RetryOnCall("bucket_migrate")
 
+				r.log().Debugf(ctx, "retrying cause bucket in migrate state (%s)", vshardErr.Name)
+
 				continue
 			}
 
@@ -208,6 +210,12 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 				// StorageCallAssertError successfully has been decoded.
 				err = errorResp
 			}
+
+			if errorResp.Type == "ClientError" || errorResp.Type == "LuajitError" {
+				return nil, nil, errorResp
+			}
+
+			r.log().Debugf(ctx, "retry cause vhsard response not ok: %s", errorResp)
 
 			continue
 		}
@@ -254,7 +262,7 @@ func (r *Router) RouterMapCallRWImpl(
 
 		for _, rs := range idToReplicasetRef {
 			future := rs.conn.Do(storageUnrefReq, pool.RW)
-			future.SetError(nil)
+			future.SetError(nil) // TODO: does it cancel the request above or not?
 		}
 	}()
 
@@ -284,21 +292,26 @@ func (r *Router) RouterMapCallRWImpl(
 
 	// ref stage: get their responses
 	var totalBucketCount uint64
+	// proto for 'storage_ref' method:
+	// https://github.com/tarantool/vshard/blob/dfa2cc8a2aff221d5f421298851a9a229b2e0434/vshard/storage/init.lua#L3137
 	for _, rsFuture := range rsFutures {
 		respData, err := rsFuture.future.Get()
 		if err != nil {
 			return nil, fmt.Errorf("rs {%s} storage_ref err: %v", rsFuture.uuid, err)
 		}
 
-		if respData[0] == nil {
-			vshardErr := &StorageCallAssertError{}
+		if len(respData) < 1 {
+			return nil, fmt.Errorf("protocol violation: storage_ref: expected len(respData) 1 or 2, got: %d", len(respData))
+		}
 
-			err = mapstructure.Decode(respData[1], vshardErr)
-			if err != nil {
-				return nil, err
+		if respData[0] == nil {
+			if len(respData) != 2 {
+				return nil, fmt.Errorf("protocol vioaltion: storage_ref: expected len(respData) = 2 when respData[0] == nil, got %d", len((respData)))
 			}
 
-			return nil, vshardErr
+			// The possible variations of error in respData[1] are fully unknown yet for us, this question requires research.
+			// So we do not convert respData[1] to some known error format, because we don't use it anyway.
+			return nil, fmt.Errorf("storage_ref failed on %v: %v", rsFuture.uuid, respData[1])
 		}
 
 		var bucketCount uint64
@@ -333,45 +346,51 @@ func (r *Router) RouterMapCallRWImpl(
 
 	// map stage: get their responses
 	idToResult := make(map[uuid.UUID]interface{})
+	// proto for 'storage_map' method:
+	// https://github.com/tarantool/vshard/blob/8d299bfecff8bc656056658350ad48c829f9ad3f/vshard/storage/init.lua#L3158
 	for _, rsFuture := range rsFutures {
 		respData, err := rsFuture.future.Get()
 		if err != nil {
 			return nil, fmt.Errorf("rs {%s} storage_map err: %v", rsFuture.uuid, err)
 		}
 
-		if len(respData) != 2 {
-			return nil, fmt.Errorf("invalid length of response data: must be = 2, current: %d", len(respData))
+		if len(respData) < 1 {
+			return nil, fmt.Errorf("protocol violation: invalid respData length: must be >= 1, current: %d", len(respData))
 		}
 
 		if respData[0] == nil {
-			vshardErr := &StorageCallAssertError{}
-
-			err = mapstructure.Decode(respData[1], vshardErr)
-			if err != nil {
-				return nil, err
+			if len(respData) != 2 {
+				return nil, fmt.Errorf("protocol violation: invalid respData length when respData[0] == nil, must be = 2, current: %d", len(respData))
 			}
 
-			return nil, vshardErr
+			assertError := &StorageCallAssertError{}
+			err = mapstructure.Decode(respData[1], assertError)
+			if err != nil {
+				// TODO: not only StorageCallAssertError is possible here?
+				return nil, fmt.Errorf("storage_map failed on %v: %+v (decoding to assertError failed %v)", rsFuture.uuid, respData[1], err)
+			}
+
+			return nil, fmt.Errorf("storage_map failed on %v: %w", rsFuture.uuid, assertError)
 		}
 
 		var isVShardRespOk bool
 		err = rsFuture.future.GetTyped(&[]interface{}{&isVShardRespOk})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("can't decode isVShardRespOk for storage_map response: %v", err)
 		}
 
-		if !isVShardRespOk { // error
-			errorResp := &StorageCallAssertError{}
-
-			err = rsFuture.future.GetTyped(&[]interface{}{&isVShardRespOk, errorResp})
-			if err != nil {
-				return nil, fmt.Errorf("cant get typed vshard err with err: %v", err)
-			}
-
-			return nil, errorResp
+		if !isVShardRespOk {
+			return nil, fmt.Errorf("protocol violation: isVShardRespOk = false from storage_map: replicaset %v", rsFuture.uuid)
 		}
 
-		idToResult[rsFuture.uuid] = respData[1]
+		switch l := len(respData); l {
+		case 1:
+			idToResult[rsFuture.uuid] = nil
+		case 2:
+			idToResult[rsFuture.uuid] = respData[1]
+		default:
+			return nil, fmt.Errorf("protocol vioaltion: invalid respData when respData[0] == true, expected 1 or 2, got %d", l)
+		}
 	}
 
 	r.metrics().RequestDuration(time.Since(timeStart), true, true)

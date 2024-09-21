@@ -3,7 +3,6 @@ package vshard_router //nolint:revive
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 
 	"github.com/google/uuid"
 	"github.com/tarantool/go-tarantool/v2"
@@ -93,8 +92,6 @@ func (r *Router) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, insta
 			Name: rsInfo.Name,
 			UUID: rsInfo.UUID,
 		},
-		// according to the documentation, it will be initialized by zero, see: https://pkg.go.dev/sync/atomic#Int32
-		bucketCount: atomic.Int32{},
 	}
 
 	rsInstances := make([]pool.Instance, 0, len(instances))

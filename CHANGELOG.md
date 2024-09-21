@@ -1,8 +1,22 @@
 ## Unreleased
 
+BUG FIXES:
+
+* RouterCallImpl: fix decoding response from storage_ref (partially #42)
+* RouterCallImpl: fix decoding response from storage_map (partially #42)
+* BucketDiscovery: check res for nil
+* BucketStat: decode bsInfo by ptr
+* ReplicaCall: fix decoding response (#42)
+* ReplicaCall: fix ignoring timeout while waiting for future.Get()
+* Fix retry on Client or LuaJit error
+
 FEATURES:
 
 * Support new Sprintf-like logging interface (#48)
+* DiscoveryTimeout by default is 1 minute (zero DiscoveryTimeout is not allowed #60)
+* All discovering logs has new prefix [DISCOVERY]
+* Introduce Replicaset.CallAsync, it is usefull to send concurrent requests to replicasets;
+	additionally, CallAsync provides new interface to interact with replicaset without cons of interface of ReplicaCall
 * Added call interfaces backwards compatible with go-tarantool (#31).
 
 REFACTOR:
@@ -10,6 +24,25 @@ REFACTOR:
 * resolve issue #38: simplify DiscoveryAllBuckets and remove suspicious if
 * resolve issue #46: drastically simplify RouterMapCallRWImpl and added tests with real tnt
 * Use typed nil pointers instead of memory allocation for EmptyMetrics and emptyLogger structs
+* resolve issue #44: remove bucketCount field from struct Replicaset
+* rename startCronDiscovery to cronDiscovery and make it panic-tolerant
+* BucketStat: split into bucketStatAsync and bucketStatWait parts
+* BucketDiscovery: do not spawn goroutines, just use futures in the single goroutine
+* BucketResolve: make it alias for BucketDiscovery
+
+TESTS:
+
+* New test for RouterCallImpl (and fix the old one)
+* New tnt tests for discovery logic
+* New tnt tests for RouterMapCallRWImpl
+* New tnt tests for topology logic
+* Big CI update
+  * 2 sections for CI: static checks and tests
+  * integration tests run on ci with Tarantool cluster on vshard
+  * implemented luacheck for static checks
+* New tnt tests for ReplicaCall
+* New tnt tests for CallAsync
+* Init Go benches for tests/tnt
 
 EXAMPLES:
 * customer go mod fixed 

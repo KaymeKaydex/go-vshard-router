@@ -3,7 +3,6 @@ package vshard_router //nolint:revive
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,8 +28,6 @@ type ReplicasetCallOpts struct {
 type Replicaset struct {
 	conn pool.Pooler
 	info ReplicasetInfo
-
-	bucketCount atomic.Int32
 }
 
 func (rs *Replicaset) String() string {
@@ -38,28 +35,39 @@ func (rs *Replicaset) String() string {
 }
 
 func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketStatInfo, error) {
-	const bucketStatFnc = "vshard.storage.bucket_stat"
+	future := rs.bucketStatAsync(ctx, bucketID)
 
-	var bsInfo BucketStatInfo
+	return bucketStatWait(future)
+}
+
+func (rs *Replicaset) bucketStatAsync(ctx context.Context, bucketID uint64) *tarantool.Future {
+	const bucketStatFnc = "vshard.storage.bucket_stat"
 
 	req := tarantool.NewCallRequest(bucketStatFnc).
 		Args([]interface{}{bucketID}).
 		Context(ctx)
 
 	future := rs.conn.Do(req, pool.RO)
+
+	return future
+}
+
+func bucketStatWait(future *tarantool.Future) (BucketStatInfo, error) {
+	var bsInfo BucketStatInfo
+
 	respData, err := future.Get()
 	if err != nil {
 		return bsInfo, err
 	}
 
 	if len(respData) < 1 {
-		return bsInfo, fmt.Errorf("respData len is 0 for %s; unsupported or broken proto", bucketStatFnc)
+		return bsInfo, fmt.Errorf("respData len is 0 for bucketStatWait; unsupported or broken proto")
 	}
 
 	if respData[0] == nil {
 
 		if len(respData) < 2 {
-			return bsInfo, fmt.Errorf("respData len < 2 when respData[0] is nil for %s", bucketStatFnc)
+			return bsInfo, fmt.Errorf("respData len < 2 when respData[0] is nil for bucketStatWait")
 		}
 
 		var tmp interface{} // todo: fix non-panic crutch
@@ -75,7 +83,7 @@ func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketSt
 
 	// A problem with key-code 1
 	// todo: fix after https://github.com/tarantool/go-tarantool/issues/368
-	err = mapstructure.Decode(respData[0], bsInfo)
+	err = mapstructure.Decode(respData[0], &bsInfo)
 	if err != nil {
 		return bsInfo, fmt.Errorf("can't decode bsInfo: %w", err)
 	}
@@ -85,22 +93,27 @@ func (rs *Replicaset) BucketStat(ctx context.Context, bucketID uint64) (BucketSt
 
 // ReplicaCall perform function on remote storage
 // link https://github.com/tarantool/vshard/blob/master/vshard/replicaset.lua#L661
+// This method is deprecated, because looks like it has a little bit broken interface
 func (rs *Replicaset) ReplicaCall(
 	ctx context.Context,
 	opts ReplicasetCallOpts,
 	fnc string,
 	args interface{},
 ) (interface{}, StorageResultTypedFunc, error) {
-	if opts.Timeout == 0 {
-		opts.Timeout = CallTimeoutMin
+	timeout := CallTimeoutMin
+
+	if opts.Timeout > 0 {
+		timeout = opts.Timeout
 	}
 
-	timeout := opts.Timeout
 	timeStart := time.Now()
 
-	req := tarantool.NewCallRequest(fnc)
-	req = req.Context(ctx)
-	req = req.Args(args)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	req := tarantool.NewCallRequest(fnc).
+		Context(ctx).
+		Args(args)
 
 	var (
 		respData []interface{}
@@ -119,20 +132,9 @@ func (rs *Replicaset) ReplicaCall(
 			continue
 		}
 
-		if len(respData) != 2 {
-			err = fmt.Errorf("invalid length of response data: must be = 2, current: %d", len(respData))
-			continue
-		}
-
-		if respData[1] != nil {
-			assertErr := &StorageCallAssertError{}
-
-			err = mapstructure.Decode(respData[1], assertErr)
-			if err != nil {
-				continue
-			}
-
-			err = assertErr
+		if len(respData) == 0 {
+			// Since this method returns the first element of respData by contract, we can't return anything is this case (broken interface)
+			err = fmt.Errorf("response data is empty")
 			continue
 		}
 
@@ -140,4 +142,22 @@ func (rs *Replicaset) ReplicaCall(
 			return future.GetTyped(&[]interface{}{&result})
 		}, nil
 	}
+}
+
+// Call sends async request to remote storage
+func (rs *Replicaset) CallAsync(ctx context.Context, opts ReplicasetCallOpts, fnc string, args interface{}) *tarantool.Future {
+	if opts.Timeout > 0 {
+		// Don't set any timeout by default, parent context timeout would be inherited in this case.
+		// Don't call cancel in defer, because this we send request asynchronously,
+		// and wait for result outside from this function.
+		// suppress linter warning: lostcancel: the cancel function returned by context.WithTimeout should be called, not discarded, to avoid a context leak (govet)
+		//nolint:govet
+		ctx, _ = context.WithTimeout(ctx, opts.Timeout)
+	}
+
+	req := tarantool.NewCallRequest(fnc).
+		Context(ctx).
+		Args(args)
+
+	return rs.conn.Do(req, opts.PoolMode)
 }

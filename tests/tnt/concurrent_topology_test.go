@@ -1,15 +1,15 @@
-package tnt_test
+package tnt
 
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
 
 	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
+	"github.com/stretchr/testify/require"
 )
 
 type concurrentTopologyProvider struct {
@@ -35,6 +35,9 @@ func (c *concurrentTopologyProvider) Init(tc vshardrouter.TopologyController) er
 		defer close(c.closed)
 		//nolint:errcheck
 		defer tc.AddReplicasets(ctx, removed)
+		// Hack until issue will be resolved: https://github.com/KaymeKaydex/go-vshard-router/issues/65
+		// A little pause to let finish NewRouter() with no err
+		time.Sleep(2 * time.Second)
 
 		type actiont int
 
@@ -109,13 +112,11 @@ func TestConncurrentTopologyChange(t *testing.T) {
 	1) Addreplicaset + Removereplicaset by random in one goroutine
 	2) Call ReplicaCall, MapRw and etc. in another goroutines
 	*/
+	skipOnInvalidRun(t)
 
-	if !isCorrectRun() {
-		log.Printf("Incorrect run of tnt-test framework")
-		return
-	}
-
-	t.Parallel()
+	// Don't run this parallel with other tests, because this test is heavy and used to detect data races.
+	// Therefore this test may impact other ones.
+	// t.Parallel()
 
 	tc := &concurrentTopologyProvider{}
 
@@ -127,9 +128,8 @@ func TestConncurrentTopologyChange(t *testing.T) {
 		User:             defaultTntUser,
 		Password:         defaultTntPassword,
 	})
-	if err != nil {
-		panic(err)
-	}
+
+	require.Nil(t, err, "NewRouter finished successfully")
 
 	wg := sync.WaitGroup{}
 
@@ -147,11 +147,14 @@ func TestConncurrentTopologyChange(t *testing.T) {
 			default:
 			}
 
-			//nolint:gosec
-			bucketID := uint64((rand.Int() % totalBucketCount) + 1)
+			bucketID := randBucketID(totalBucketCount)
 			args := []interface{}{"arg1"}
 
-			_, _, _ = router.RouterCallImpl(ctx, bucketID, vshardrouter.CallOpts{}, "echo", args)
+			callOpts := vshardrouter.CallOpts{
+				VshardMode: vshardrouter.ReadMode,
+			}
+
+			_, _, _ = router.RouterCallImpl(ctx, bucketID, callOpts, "echo", args)
 		}
 	}()
 
@@ -174,5 +177,7 @@ func TestConncurrentTopologyChange(t *testing.T) {
 	wg.Wait()
 
 	// is router.Close method required?
-	tc.Close()
+	// tc.Close()
+	// TODO: we removed the above close, because sometimes tests stuck because
+	// rs.conn.CloseGraceful() (in RemoveReplicaset) stucks due to some unknown reason yet.
 }

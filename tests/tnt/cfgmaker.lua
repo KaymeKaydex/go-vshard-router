@@ -2,6 +2,7 @@
 
 require('strict').on()
 
+-- luacheck: ignore
 local config_example = {
     sharding = {
         ['cbf06940-0790-498b-948d-042b62cf3d29'] = { -- replicaset #1
@@ -31,7 +32,7 @@ local config_example = {
             },
         }, -- replicaset #2
     }, -- sharding
-    replication_connect_quorum = 0,
+    replication_connect_quorum = 2,
 }
 
 local function get_uid(rs_id, instance_id)
@@ -89,7 +90,6 @@ end
 local function clustercfg(start_port, nreplicasets)
     local cfg = {
         sharding = {},
-        replication_connect_quorum = 0,
     }
 
     for rs_id = 1, nreplicasets do

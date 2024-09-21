@@ -1,8 +1,7 @@
-package tnt_test
+package tnt
 
 import (
 	"context"
-	"log"
 	"testing"
 	"time"
 
@@ -12,10 +11,9 @@ import (
 )
 
 func TestRouterMapCall(t *testing.T) {
-	if !isCorrectRun() {
-		log.Printf("Incorrect run of tnt-test framework")
-		return
-	}
+	skipOnInvalidRun(t)
+
+	t.Parallel()
 
 	ctx := context.Background()
 
@@ -30,19 +28,37 @@ func TestRouterMapCall(t *testing.T) {
 		Password:         defaultTntPassword,
 	})
 
-	if err != nil {
-		panic(err)
-	}
+	require.Nil(t, err, "NewRouter finished successfully")
+
+	callOpts := vshardrouter.CallOpts{}
 
 	const arg = "arg1"
 
 	// Enusre that RouterMapCallRWImpl works at all
 	echoArgs := []interface{}{arg}
-	resp, err := router.RouterMapCallRWImpl(ctx, "echo", echoArgs, vshardrouter.CallOpts{})
+	resp, err := router.RouterMapCallRWImpl(ctx, "echo", echoArgs, callOpts)
 	require.NoError(t, err, "RouterMapCallRWImpl echo finished with no err")
 
 	for k, v := range resp {
 		require.Equalf(t, arg, v, "RouterMapCallRWImpl value ok for %v", k)
+	}
+
+	// RouterMapCallRWImpl returns only one value
+	echoArgs = []interface{}{arg, "arg2"}
+	resp, err = router.RouterMapCallRWImpl(ctx, "echo", echoArgs, callOpts)
+	require.NoError(t, err, "RouterMapCallRWImpl echo finished with no err")
+
+	for k, v := range resp {
+		require.Equalf(t, arg, v, "RouterMapCallRWImpl value ok for %v", k)
+	}
+
+	// RouterMapCallRWImpl returns nil when no return value
+	noArgs := []interface{}{}
+	resp, err = router.RouterMapCallRWImpl(ctx, "echo", noArgs, callOpts)
+	require.NoError(t, err, "RouterMapCallRWImpl echo finished with no err")
+
+	for k, v := range resp {
+		require.Equalf(t, nil, v, "RouterMapCallRWImpl value ok for %v", k)
 	}
 
 	// Ensure that RouterMapCallRWImpl sends requests concurrently
@@ -59,6 +75,14 @@ func TestRouterMapCall(t *testing.T) {
 	require.Greater(t, len(cfg), 1, "There are more than one replicasets")
 	require.Less(t, duration, 1200*time.Millisecond, "Requests were send concurrently")
 
+	// RouterMapCallRWImpl returns err on raise_luajit_error
+	_, err = router.RouterMapCallRWImpl(ctx, "raise_luajit_error", noArgs, callOpts)
+	require.NotNil(t, err, "RouterMapCallRWImpl raise_luajit_error finished with error")
+
+	// RouterMapCallRWImpl invalid usage
+	_, err = router.RouterMapCallRWImpl(ctx, "echo", nil, callOpts)
+	require.NotNil(t, err, "RouterMapCallRWImpl with nil args finished with error")
+
 	// Ensure that RouterMapCallRWImpl doesn't work when it mean't to
 	for k := range cfg {
 		errs := router.RemoveReplicaset(ctx, k.UUID)
@@ -66,6 +90,6 @@ func TestRouterMapCall(t *testing.T) {
 		break
 	}
 
-	_, err = router.RouterMapCallRWImpl(ctx, "echo", echoArgs, vshardrouter.CallOpts{})
+	_, err = router.RouterMapCallRWImpl(ctx, "echo", echoArgs, callOpts)
 	require.NotNilf(t, err, "RouterMapCallRWImpl failed on not full cluster")
 }

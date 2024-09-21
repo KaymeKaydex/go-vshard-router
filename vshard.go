@@ -172,12 +172,10 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	if cfg.DiscoveryMode == DiscoveryModeOn {
 		discoveryCronCtx, cancelFunc := context.WithCancel(context.Background())
 
-		go func() {
-			discoveryErr := router.startCronDiscovery(discoveryCronCtx)
-			if discoveryErr != nil {
-				router.log().Errorf(ctx, "error when run cron discovery: %s", discoveryErr)
-			}
-		}()
+		// run background cron discovery loop
+		// suppress linter warning: Non-inherited new context, use function like `context.WithXXX` instead (contextcheck)
+		//nolint:contextcheck
+		go router.cronDiscovery(discoveryCronCtx)
 
 		router.cancelDiscovery = cancelFunc
 	}
@@ -196,15 +194,8 @@ func (r *Router) BucketSet(bucketID uint64, rsID uuid.UUID) (*Replicaset, error)
 
 	view := r.getConsistentView()
 
-	oldReplicaset := view.routeMap[bucketID].Swap(rs)
-	if oldReplicaset != rs {
-		if oldReplicaset != nil {
-			oldReplicaset.bucketCount.Add(-1)
-		} else {
-			view.knownBucketCount.Add(1)
-		}
-
-		rs.bucketCount.Add(1)
+	if oldRs := view.routeMap[bucketID].Swap(rs); oldRs == nil {
+		view.knownBucketCount.Add(1)
 	}
 
 	return rs, nil
@@ -213,7 +204,7 @@ func (r *Router) BucketSet(bucketID uint64, rsID uuid.UUID) (*Replicaset, error)
 func (r *Router) BucketReset(bucketID uint64) {
 	view := r.getConsistentView()
 
-	if bucketID > uint64(len(view.routeMap))+1 {
+	if bucketID > r.cfg.TotalBucketCount {
 		return
 	}
 
@@ -223,23 +214,23 @@ func (r *Router) BucketReset(bucketID uint64) {
 }
 
 func (r *Router) RouteMapClean() {
-	idToReplicasetRef := r.getIDToReplicaset()
-
 	newView := &consistentView{
 		routeMap: make([]atomic.Pointer[Replicaset], r.cfg.TotalBucketCount+1),
 	}
 
 	r.setConsistentView(newView)
-
-	for _, rs := range idToReplicasetRef {
-		rs.bucketCount.Store(0)
-	}
 }
 
 func prepareCfg(cfg Config) (Config, error) {
+	const discoveryTimeoutDefault = 1 * time.Minute
+
 	err := validateCfg(cfg)
 	if err != nil {
 		return Config{}, fmt.Errorf("%v: %v", ErrInvalidConfig, err)
+	}
+
+	if cfg.DiscoveryTimeout == 0 {
+		cfg.DiscoveryTimeout = discoveryTimeoutDefault
 	}
 
 	if cfg.Loggerf == nil {
