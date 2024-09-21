@@ -1,3 +1,10 @@
+## Unreleased
+
+TESTS:
+
+* Simplify test/tnt/{Makefile,router.lua)
+* Indent fix for test/tnt/storage.lua
+
 ## v1.0.1
 
 BUG FIXES:
