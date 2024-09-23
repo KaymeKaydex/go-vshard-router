@@ -17,7 +17,8 @@ FEATURES:
 * All discovering logs has new prefix [DISCOVERY]
 * Introduce Replicaset.CallAsync, it is usefull to send concurrent requests to replicasets;
 	additionally, CallAsync provides new interface to interact with replicaset without cons of interface of ReplicaCall
-* Retry tarantool request only on some vshard errors (#66)
+* Retry tarantool request only on some vshard errors (#66).
+* Added call interfaces backwards compatible with go-tarantool (#31).
 
 REFACTOR:
 
