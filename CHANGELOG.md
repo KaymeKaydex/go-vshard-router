@@ -1,4 +1,4 @@
-## Unreleased
+## v1.0.1
 
 BUG FIXES:
 * fix invalid go-tarantool backward compatibility: NewCallRequest not method of router.
