@@ -2,7 +2,6 @@ package tnt
 
 import (
 	"context"
-	"log"
 	"testing"
 	"time"
 
@@ -14,10 +13,7 @@ import (
 )
 
 func TestReplicasetReplicaCall(t *testing.T) {
-	if !isCorrectRun() {
-		log.Printf("Incorrect run of tnt-test framework")
-		return
-	}
+	skipOnInvalidRun(t)
 
 	t.Parallel()
 
@@ -101,10 +97,7 @@ func TestReplicasetReplicaCall(t *testing.T) {
 }
 
 func TestReplicsetCallAsync(t *testing.T) {
-	if !isCorrectRun() {
-		log.Printf("Incorrect run of tnt-test framework")
-		return
-	}
+	skipOnInvalidRun(t)
 
 	t.Parallel()
 

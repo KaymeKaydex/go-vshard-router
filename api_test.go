@@ -68,6 +68,6 @@ func TestRouter_RouterCallImpl(t *testing.T) {
 		})
 
 		_, _, err := r.RouterCallImpl(ctx, 5, CallOpts{Timeout: time.Second}, "test", []byte("test"))
-		require.ErrorIs(t, futureError, err)
+		require.ErrorIs(t, err, futureError)
 	})
 }
