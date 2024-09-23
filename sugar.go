@@ -24,7 +24,7 @@ type CallResponse struct {
 }
 
 // NewCallRequest returns a new empty CallRequest.
-func (r *Router) NewCallRequest(function string) *CallRequest {
+func NewCallRequest(function string) *CallRequest {
 	req := new(CallRequest)
 	req.fnc = function
 	return req
