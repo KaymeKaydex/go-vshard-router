@@ -107,7 +107,9 @@ type Config struct {
 	BucketGetter func(ctx context.Context) uint64
 	// RequestTimeout timeout for requests to Tarantool.
 	// Don't rely on using this timeout.
-	// Currently, it only works for sugar implementations and works as a retry timeout.
+	// This is the difference between the timeout of the library itself
+	// that is, our retry timeout if the buckets, for example, move.
+	// Currently, it only works for sugar implementations .
 	RequestTimeout time.Duration
 }
 
