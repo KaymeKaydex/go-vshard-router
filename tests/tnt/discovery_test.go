@@ -15,20 +15,33 @@ func TestBucketDiscovery(t *testing.T) {
 
 	t.Parallel()
 
+	var modes = []vshardrouter.BucketsSearchMode{
+		vshardrouter.BucketsSearchLegacy,
+		vshardrouter.BucketsSearchBatchedQuick,
+		vshardrouter.BucketsSearchBatchedFull,
+	}
+
+	for _, mode := range modes {
+		testBucketDiscoveryWithMode(t, mode)
+	}
+}
+
+func testBucketDiscoveryWithMode(t *testing.T, searchMode vshardrouter.BucketsSearchMode) {
 	ctx := context.Background()
 
 	cfg := getCfg()
 
 	router, err := vshardrouter.NewRouter(ctx, vshardrouter.Config{
-		TopologyProvider: static.NewProvider(cfg),
-		DiscoveryTimeout: 5 * time.Second,
-		DiscoveryMode:    vshardrouter.DiscoveryModeOn,
-		TotalBucketCount: totalBucketCount,
-		User:             defaultTntUser,
-		Password:         defaultTntPassword,
+		TopologyProvider:  static.NewProvider(cfg),
+		DiscoveryTimeout:  5 * time.Second,
+		DiscoveryMode:     vshardrouter.DiscoveryModeOnce,
+		BucketsSearchMode: searchMode,
+		TotalBucketCount:  totalBucketCount,
+		User:              defaultTntUser,
+		Password:          defaultTntPassword,
 	})
 
-	require.Nil(t, err, "NewRouter finished successfully")
+	require.Nilf(t, err, "NewRouter finished successfully, mode %v", searchMode)
 
 	// pick some random bucket
 	bucketID := randBucketID(totalBucketCount)
@@ -38,7 +51,7 @@ func TestBucketDiscovery(t *testing.T) {
 
 	// resolve it
 	rs, err := router.BucketResolve(ctx, bucketID)
-	require.Nil(t, err, "BucketResolve ok")
+	require.Nilf(t, err, "BucketResolve ok, mode %v", searchMode)
 
 	// reset it again
 	router.BucketReset(bucketID)

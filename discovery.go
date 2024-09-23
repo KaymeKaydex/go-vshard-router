@@ -2,6 +2,7 @@ package vshard_router //nolint:revive
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime/debug"
 	"time"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/tarantool/go-tarantool/v2"
-	"github.com/tarantool/go-tarantool/v2/pool"
 )
 
 // --------------------------------------------------------------------------------
@@ -23,6 +23,27 @@ const (
 	// DiscoveryModeOn is cron discovery with cron timeout
 	DiscoveryModeOn DiscoveryMode = iota
 	DiscoveryModeOnce
+)
+
+// BucketsSearchMode a type, that used to define policy for BucketDiscovery method.
+// See type Config for futher details.
+type BucketsSearchMode int
+
+const (
+	// BucketsSearchLegacy implements the same logic as lua router:
+	// send bucket_stat request to every replicaset,
+	// return a response immediately if any of them succeed.
+	BucketsSearchLegacy BucketsSearchMode = iota
+	// BucketsSearchBatchedQuick and BucketsSearchBatchedFull implement another logic:
+	// send buckets_discovery request to every replicaset with from=bucketID,
+	// seek our bucketID in their responses.
+	// Additionally, store other bucketIDs in the route map.
+	// BucketsSearchBatchedQuick stops iterating over replicasets responses as soon as our bucketID is found.
+	BucketsSearchBatchedQuick
+	// BucketsSearchBatchedFull implements the same logic as BucketsSearchBatchedQuick,
+	// but doesn't stop iterating over replicasets responses as soon as our bucketID is found.
+	// Instead, it always iterates over all replicasets responses even bucketID is found.
+	BucketsSearchBatchedFull
 )
 
 // BucketDiscovery search bucket in whole cluster
@@ -41,6 +62,14 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 	// it`s ok if in the same time we have few active searches
 	r.log().Infof(ctx, "Discovering bucket %d", bucketID)
 
+	if r.cfg.BucketsSearchMode == BucketsSearchLegacy {
+		return r.bucketSearchLegacy(ctx, bucketID)
+	}
+
+	return r.bucketSearchBatched(ctx, bucketID)
+}
+
+func (r *Router) bucketSearchLegacy(ctx context.Context, bucketID uint64) (*Replicaset, error) {
 	idToReplicasetRef := r.getIDToReplicaset()
 
 	type rsFuture struct {
@@ -59,14 +88,18 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 
 	for _, rsFuture := range rsFutures {
 		if _, err := bucketStatWait(rsFuture.future); err != nil {
-			// just skip, bucket seems do not belong to this replicaset
+			var bsError bucketStatError
+			if !errors.As(err, &bsError) {
+				r.log().Errorf(ctx, "bucketSearchLegacy: bucketStatWait call error for %v: %v", rsFuture.rsID, err)
+			}
+			// just skip, bucket may not belong to this replicaset
 			continue
 		}
 
 		// It's ok if several replicasets return ok to bucket_stat command for the same bucketID, just pick any of them.
 		rs, err := r.BucketSet(bucketID, rsFuture.rsID)
 		if err != nil {
-			r.log().Errorf(ctx, "BucketDiscovery: can't set rsID %v for bucketID %d: %v", rsFuture.rsID, bucketID, err)
+			r.log().Errorf(ctx, "bucketSearchLegacy: can't set rsID %v for bucketID %d: %v", rsFuture.rsID, bucketID, err)
 			return nil, Errors[9] // NO_ROUTE_TO_BUCKET
 		}
 
@@ -84,6 +117,70 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 	*/
 
 	return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+}
+
+// The approach in bucketSearchLegacy is very ineffective because
+// we use N vshard.storage.bucket_stat requests over the network
+// to find out the location of a single bucket. So, we use here vshard.storage.buckets_discovery request instead.
+// As a result, we find the location for N * 1000 buckets while paying almost the same cost (CPU, network).
+// P.S. 1000 is a batch size in response of buckets_discovery, see:
+// https://github.com/tarantool/vshard/blob/dfa2cc8a2aff221d5f421298851a9a229b2e0434/vshard/storage/init.lua#L1700
+// https://github.com/tarantool/vshard/blob/dfa2cc8a2aff221d5f421298851a9a229b2e0434/vshard/consts.lua#L37
+func (r *Router) bucketSearchBatched(ctx context.Context, bucketIDToFind uint64) (*Replicaset, error) {
+	idToReplicasetRef := r.getIDToReplicaset()
+	view := r.getConsistentView()
+
+	type rsFuture struct {
+		rs     *Replicaset
+		rsID   uuid.UUID
+		future *tarantool.Future
+	}
+
+	var rsFutures = make([]rsFuture, 0, len(idToReplicasetRef))
+	// Send a bunch of parallel requests
+	for rsID, rs := range idToReplicasetRef {
+		rsFutures = append(rsFutures, rsFuture{
+			rs:     rs,
+			rsID:   rsID,
+			future: rs.bucketsDiscoveryAsync(ctx, bucketIDToFind),
+		})
+	}
+
+	var rs *Replicaset
+
+	for _, rsFuture := range rsFutures {
+		resp, err := bucketsDiscoveryWait(rsFuture.future)
+		if err != nil {
+			r.log().Errorf(ctx, "bucketSearchBatched: bucketsDiscoveryWait error for %v: %v", rsFuture.rsID, err)
+			// just skip, we still may find our bucket in another replicaset
+			continue
+		}
+
+		for _, bucketID := range resp.Buckets {
+			if bucketID == bucketIDToFind {
+				// We found where bucketIDToFind is located
+				rs = rsFuture.rs
+			}
+
+			if old := view.routeMap[bucketID].Swap(rs); old == nil {
+				view.knownBucketCount.Add(1)
+			}
+		}
+
+		if bucketIDWasFound := rs != nil; !bucketIDWasFound {
+			continue
+		}
+
+		if r.cfg.BucketsSearchMode == BucketsSearchBatchedQuick {
+			return rs, nil
+		}
+	}
+
+	if rs == nil {
+		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+	}
+
+	return rs, nil
 }
 
 // BucketResolve resolve bucket id to replicaset
@@ -140,25 +237,10 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 		rs := rs
 
 		errGr.Go(func() error {
-			var bucketsDiscoveryPaginationRequest struct {
-				From uint64 `msgpack:"from"`
-			}
+			var bucketsDiscoveryPaginationFrom uint64
 
 			for {
-				req := tarantool.NewCallRequest("vshard.storage.buckets_discovery").
-					Context(ctx).
-					Args([]interface{}{&bucketsDiscoveryPaginationRequest})
-
-				future := rs.conn.Do(req, pool.PreferRO)
-
-				// We intentionally don't support old vshard storages that mentioned here:
-				// https://github.com/tarantool/vshard/blob/8d299bfecff8bc656056658350ad48c829f9ad3f/vshard/router/init.lua#L343
-				var resp struct {
-					Buckets  []uint64 `msgpack:"buckets"`
-					NextFrom uint64   `msgpack:"next_from"`
-				}
-
-				err := future.GetTyped(&[]interface{}{&resp})
+				resp, err := rs.bucketsDiscovery(ctx, bucketsDiscoveryPaginationFrom)
 				if err != nil {
 					return err
 				}
@@ -178,7 +260,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 					return nil
 				}
 
-				bucketsDiscoveryPaginationRequest.From = resp.NextFrom
+				bucketsDiscoveryPaginationFrom = resp.NextFrom
 			}
 		})
 	}
