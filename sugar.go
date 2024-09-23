@@ -58,6 +58,8 @@ func (r *Router) Do(req *CallRequest, userMode pool.Mode) *CallResponse {
 
 	vshardMode := ReadMode
 
+	// If the user says he prefers to do it on the master,
+	// then he agrees that it will go to the replica, which means he will not write.
 	if userMode == pool.RW {
 		vshardMode = WriteMode
 	}
