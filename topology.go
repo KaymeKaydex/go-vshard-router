@@ -59,6 +59,7 @@ func (r *Router) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceI
 			User:     r.cfg.User,
 			Password: r.cfg.Password,
 		},
+		Opts: r.cfg.PoolOpts,
 	}
 
 	idToReplicasetRef := r.getIDToReplicaset()
