@@ -7,10 +7,12 @@ BUG FIXES:
 * RouterCallImpl: retry on BucketResolve error.
 * RouterCallImpl: do not retry on vshard error "TRANSFER_IS_IN_PROGRESS".
 * RouterCallImpl: remove misleading RetryOnCall.
+* AddInstance bugfix: pass r.cfg.PoolOpts to new instance.
 
 FEATURES:
 
 * Support StdoutLoggerf that allows control log level (resolve issue #84).
+* Implement go-tarantool Logger interface to use the same logger as router uses (resolve issue #79).
 
 ## v1.1.0
 
