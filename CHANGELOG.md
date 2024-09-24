@@ -1,9 +1,16 @@
 ## Unreleased
 
+CHANGES:
+* We don't support LogProvider interface anymore, only LogfProvider should be used.
+
 BUG FIXES:
 * RouterCallImpl: retry on BucketResolve error.
 * RouterCallImpl: do not retry on vshard error "TRANSFER_IS_IN_PROGRESS".
 * RouterCallImpl: remove misleading RetryOnCall.
+
+FEATURES:
+
+* Support StdoutLoggerf that allows control log level (resolve issue #84).
 
 ## v1.1.0
 

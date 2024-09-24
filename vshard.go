@@ -86,8 +86,8 @@ func (r *Router) setConsistentView(view *consistentView) {
 
 type Config struct {
 	// Providers
-	Logger           LogProvider      // Logger is not required, legacy interface
-	Loggerf          LogfProvider     // Loggerf is not required, new interface
+	// Loggerf injects a custom logger. By default there is no logger is used.
+	Loggerf          LogfProvider     // Loggerf is not required
 	Metrics          MetricsProvider  // Metrics is not required
 	TopologyProvider TopologyProvider // TopologyProvider is required provider
 
@@ -240,11 +240,7 @@ func prepareCfg(cfg Config) (Config, error) {
 	}
 
 	if cfg.Loggerf == nil {
-		if cfg.Logger != nil {
-			cfg.Loggerf = &legacyLoggerProxy{l: cfg.Logger}
-		} else {
-			cfg.Loggerf = emptyLogfProvider
-		}
+		cfg.Loggerf = emptyLogfProvider
 	}
 
 	if cfg.Metrics == nil {

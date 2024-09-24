@@ -2,74 +2,85 @@ package vshard_router //nolint:revive
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 )
 
 var (
 	emptyMetricsProvider MetricsProvider = (*EmptyMetrics)(nil)
+	emptyLogfProvider    LogfProvider    = emptyLogger{}
 
-	emptyLogfProvider LogfProvider = (*emptyLogger)(nil)
-	_                 LogProvider  = (*StdoutLogger)(nil)
+	// Ensure StdoutLoggerf implements LogfProvider
+	_ LogfProvider = StdoutLoggerf{}
 )
 
-// LogProvider is a legacy interface for backward compatibility.
-type LogProvider interface {
-	Info(context.Context, string)
-	Debug(context.Context, string)
-	Error(context.Context, string)
-	Warn(context.Context, string)
-}
-
+// LogfProvider an interface to inject a custom logger.
 type LogfProvider interface {
-	Infof(ctx context.Context, format string, v ...any)
 	Debugf(ctx context.Context, format string, v ...any)
-	Errorf(ctx context.Context, format string, v ...any)
+	Infof(ctx context.Context, format string, v ...any)
 	Warnf(ctx context.Context, format string, v ...any)
-}
-
-// We use this type to support legacy logger api
-type legacyLoggerProxy struct {
-	l LogProvider
-}
-
-func (p *legacyLoggerProxy) Infof(ctx context.Context, format string, v ...any) {
-	p.l.Info(ctx, fmt.Sprintf(format, v...))
-}
-
-func (p *legacyLoggerProxy) Debugf(ctx context.Context, format string, v ...any) {
-	p.l.Debug(ctx, fmt.Sprintf(format, v...))
-}
-
-func (p *legacyLoggerProxy) Errorf(ctx context.Context, format string, v ...any) {
-	p.l.Error(ctx, fmt.Sprintf(format, v...))
-}
-
-func (p *legacyLoggerProxy) Warnf(ctx context.Context, format string, v ...any) {
-	p.l.Warn(ctx, fmt.Sprintf(format, v...))
+	Errorf(ctx context.Context, format string, v ...any)
 }
 
 type emptyLogger struct{}
 
-func (e *emptyLogger) Infof(_ context.Context, _ string, _ ...any)  {}
-func (e *emptyLogger) Debugf(_ context.Context, _ string, _ ...any) {}
-func (e *emptyLogger) Errorf(_ context.Context, _ string, _ ...any) {}
-func (e *emptyLogger) Warnf(_ context.Context, _ string, _ ...any)  {}
+func (e emptyLogger) Debugf(_ context.Context, _ string, _ ...any) {}
+func (e emptyLogger) Infof(_ context.Context, _ string, _ ...any)  {}
+func (e emptyLogger) Warnf(_ context.Context, _ string, _ ...any)  {}
+func (e emptyLogger) Errorf(_ context.Context, _ string, _ ...any) {}
 
-type StdoutLogger struct{}
+// StdoutLogLevel is a type to control log level for StdoutLoggerf.
+type StdoutLogLevel int
 
-func (e *StdoutLogger) Info(_ context.Context, msg string) {
-	log.Println(msg)
+const (
+	// StdoutLogDefault is equal to default value of StdoutLogLevel. Acts like StdoutLogInfo.
+	StdoutLogDefault StdoutLogLevel = iota
+	// StdoutLogDebug enables debug or higher level logs for StdoutLoggerf
+	StdoutLogDebug
+	// StdoutLogInfo enables only info or higher level logs for StdoutLoggerf
+	StdoutLogInfo
+	// StdoutLogWarn enables only warn or higher level logs for StdoutLoggerf
+	StdoutLogWarn
+	// StdoutLogError enables error level logs for StdoutLoggerf
+	StdoutLogError
+)
+
+// StdoutLoggerf a logger that prints into stderr
+type StdoutLoggerf struct {
+	// LogLevel controls log level to print, see StdoutLogLevel constants for details.
+	LogLevel StdoutLogLevel
 }
-func (e *StdoutLogger) Debug(_ context.Context, msg string) {
-	log.Println(msg)
+
+func (s StdoutLoggerf) printLevel(level StdoutLogLevel, prefix string, format string, v ...any) {
+	var currentLogLevel = s.LogLevel
+
+	if currentLogLevel == StdoutLogDefault {
+		currentLogLevel = StdoutLogInfo
+	}
+
+	if level >= currentLogLevel {
+		log.Printf(prefix+format, v...)
+	}
 }
-func (e *StdoutLogger) Error(_ context.Context, msg string) {
-	log.Println(msg)
+
+// Debugf implements Debugf method for LogfProvider interface
+func (s StdoutLoggerf) Debugf(_ context.Context, format string, v ...any) {
+	s.printLevel(StdoutLogDebug, "[DEBUG] ", format, v...)
 }
-func (e *StdoutLogger) Warn(_ context.Context, msg string) {
-	log.Println(msg)
+
+// Infof implements Infof method for LogfProvider interface
+func (s StdoutLoggerf) Infof(_ context.Context, format string, v ...any) {
+	s.printLevel(StdoutLogInfo, "[INFO] ", format, v...)
+}
+
+// Warnf implements Warnf method for LogfProvider interface
+func (s StdoutLoggerf) Warnf(_ context.Context, format string, v ...any) {
+	s.printLevel(StdoutLogWarn, "[WARN] ", format, v...)
+}
+
+// Errorf implements Errorf method for LogfProvider interface
+func (s StdoutLoggerf) Errorf(_ context.Context, format string, v ...any) {
+	s.printLevel(StdoutLogError, "[ERROR] ", format, v...)
 }
 
 // Metrics
