@@ -72,6 +72,50 @@ func (e *StdoutLogger) Warn(_ context.Context, msg string) {
 	log.Println(msg)
 }
 
+type StdoutLogLevel int
+
+const (
+	// StdoutLogDefault is equal to default value of StdoutLogLevel.
+	// Acts like StdoutLogInfo.
+	StdoutLogDefault StdoutLogLevel = iota
+	StdoutLogDebug
+	StdoutLogInfo
+	StdoutLogWarn
+	StdoutLogError
+)
+
+type StdoutLoggerf struct {
+	LogLevel StdoutLogLevel
+}
+
+func (s StdoutLoggerf) printLevel(level StdoutLogLevel, format string, v ...any) {
+	var currentLogLevel = s.LogLevel
+
+	if currentLogLevel == StdoutLogDefault {
+		currentLogLevel = StdoutLogInfo
+	}
+
+	if level >= currentLogLevel {
+		log.Printf(format, v...)
+	}
+}
+
+func (s StdoutLoggerf) Infof(_ context.Context, format string, v ...any) {
+	s.printLevel(StdoutLogInfo, "[INFO] "+format, v...)
+}
+
+func (s StdoutLoggerf) Debugf(_ context.Context, format string, v ...any) {
+	s.printLevel(StdoutLogDebug, "[DEBUG] "+format, v...)
+}
+
+func (s StdoutLoggerf) Errorf(_ context.Context, format string, v ...any) {
+	s.printLevel(StdoutLogError, "[ERROR] "+format, v...)
+}
+
+func (s StdoutLoggerf) Warnf(_ context.Context, format string, v ...any) {
+	s.printLevel(StdoutLogWarn, "[WARN] "+format, v...)
+}
+
 // Metrics
 
 // MetricsProvider is an interface for passing library metrics to your prometheus/graphite and other metrics

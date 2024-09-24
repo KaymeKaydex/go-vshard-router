@@ -1,3 +1,9 @@
+## Unreleased
+
+FEATURES:
+
+* Support StdoutLoggerf that allows control log level (resolve issue #84)
+
 ## v1.0.1
 
 BUG FIXES:
