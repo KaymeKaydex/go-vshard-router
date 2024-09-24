@@ -23,7 +23,7 @@ func TestController_AddInstance(t *testing.T) {
 		router := Router{
 			idToReplicaset: map[uuid.UUID]*Replicaset{},
 			cfg: Config{
-				Loggerf: &emptyLogger{},
+				Loggerf: emptyLogfProvider,
 			},
 		}
 
@@ -38,7 +38,7 @@ func TestController_AddInstance(t *testing.T) {
 		router := Router{
 			idToReplicaset: map[uuid.UUID]*Replicaset{},
 			cfg: Config{
-				Loggerf: &emptyLogger{},
+				Loggerf: emptyLogfProvider,
 			},
 		}
 
@@ -54,7 +54,7 @@ func TestController_RemoveInstance(t *testing.T) {
 		router := Router{
 			idToReplicaset: map[uuid.UUID]*Replicaset{},
 			cfg: Config{
-				Loggerf: &emptyLogger{},
+				Loggerf: emptyLogfProvider,
 			},
 		}
 
@@ -75,7 +75,7 @@ func TestController_RemoveReplicaset(t *testing.T) {
 			uuidToRemove: {conn: mPool},
 		},
 		cfg: Config{
-			Loggerf: &emptyLogger{},
+			Loggerf: emptyLogfProvider,
 		},
 	}
 
@@ -101,7 +101,7 @@ func TestRouter_AddReplicaset_AlreadyExists(t *testing.T) {
 			alreadyExistingRsUUID: {},
 		},
 		cfg: Config{
-			Loggerf: &emptyLogger{},
+			Loggerf: emptyLogfProvider,
 		},
 	}
 
