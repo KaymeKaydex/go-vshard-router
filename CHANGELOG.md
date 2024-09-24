@@ -1,8 +1,13 @@
 ## Unreleased
 
+BUG FIXES:
+
+* AddInstance bugfix: pass r.cfg.PoolOpts to new instance 
+
 FEATURES:
 
 * Support StdoutLoggerf that allows control log level (resolve issue #84)
+* Implement go-tarantool Logger interface to use the same logger as router uses (resolve issue #79)
 
 ## v1.0.1
 

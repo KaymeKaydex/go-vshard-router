@@ -243,6 +243,12 @@ func prepareCfg(cfg Config) (Config, error) {
 		}
 	}
 
+	// Log tarantool internal events using the same logger as router uses.
+	cfg.PoolOpts.Logger = tarantoolOptsLogger{
+		loggerf: cfg.Loggerf,
+		ctx:     context.Background(),
+	}
+
 	if cfg.Metrics == nil {
 		cfg.Metrics = emptyMetricsProvider
 	}
