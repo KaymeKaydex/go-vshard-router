@@ -3,7 +3,6 @@ package etcd
 import (
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
 
 	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
@@ -27,10 +26,10 @@ type Config struct {
 
 // NewProvider returns provider to etcd configuration
 // Set here path to etcd storages config and etcd config
-func NewProvider(cfg Config) *Provider {
+func NewProvider(cfg Config) (*Provider, error) {
 	c, err := client.New(cfg.EtcdConfig)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	kapi := client.NewKeysAPI(c)
@@ -38,7 +37,7 @@ func NewProvider(cfg Config) *Provider {
 	return &Provider{
 		kapi: kapi,
 		path: cfg.Path,
-	}
+	}, nil
 }
 
 // mapCluster2Instances combines clusters with instances in map

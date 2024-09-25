@@ -5,14 +5,16 @@ package etcd
 
 import (
 	"fmt"
-	mocktopology "github.com/KaymeKaydex/go-vshard-router/mocks/topology"
-	"go.etcd.io/etcd/client/v2"
 	"testing"
 	"time"
+
+	mocktopology "github.com/KaymeKaydex/go-vshard-router/mocks/topology"
+	"github.com/stretchr/testify/require"
+	"go.etcd.io/etcd/client/v2"
 )
 
 func TestNewProvider(t *testing.T) {
-	provider := NewProvider(Config{
+	provider, err := NewProvider(Config{
 		EtcdConfig: client.Config{
 			Endpoints: []string{"http://127.0.0.1:2379"},
 			Transport: client.DefaultTransport,
@@ -22,6 +24,7 @@ func TestNewProvider(t *testing.T) {
 		Path: "/project/store/storage",
 	})
 
+	require.NoError(t, err)
 	err := provider.Init(mocktopology.NewTopologyController(t))
 	fmt.Println(err)
 }

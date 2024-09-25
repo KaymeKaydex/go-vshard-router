@@ -1,3 +1,8 @@
+## Unreleased
+
+PROVIDERS:
+* ETCD provider NewProviders returns 2 values(provider and error) instead 1.
+
 ## v1.0.1
 
 BUG FIXES:
