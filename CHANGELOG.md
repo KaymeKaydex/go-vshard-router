@@ -1,3 +1,10 @@
+## Unreleased
+
+BUG FIXES:
+* RouterCallImpl: retry on BucketResolve error.
+* RouterCallImpl: do not retry on vshard error "TRANSFER_IS_IN_PROGRESS".
+* RouterCallImpl: remove misleading RetryOnCall.
+
 ## v1.1.0
 
 CHANGES:
