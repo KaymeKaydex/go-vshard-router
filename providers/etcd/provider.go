@@ -3,7 +3,6 @@ package etcd
 import (
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
 
 	vshardrouter "github.com/KaymeKaydex/go-vshard-router"
@@ -15,6 +14,9 @@ import (
 var _ vshardrouter.TopologyProvider = (*Provider)(nil)
 
 type Provider struct {
+	// ctx is root ctx of application
+	ctx context.Context
+
 	kapi client.KeysAPI
 	path string
 }
@@ -27,18 +29,19 @@ type Config struct {
 
 // NewProvider returns provider to etcd configuration
 // Set here path to etcd storages config and etcd config
-func NewProvider(cfg Config) *Provider {
+func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 	c, err := client.New(cfg.EtcdConfig)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	kapi := client.NewKeysAPI(c)
 
 	return &Provider{
+		ctx:  ctx,
 		kapi: kapi,
 		path: cfg.Path,
-	}
+	}, nil
 }
 
 // mapCluster2Instances combines clusters with instances in map
@@ -151,7 +154,7 @@ func (p *Provider) Init(c vshardrouter.TopologyController) error {
 		return err
 	}
 
-	return c.AddReplicasets(context.TODO(), topology)
+	return c.AddReplicasets(p.ctx, topology)
 }
 
 // Close must close connection, but etcd v2 client has no interfaces for this
