@@ -45,6 +45,8 @@ func (r *Router) Topology() TopologyController {
 }
 
 func (r *Router) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceInfo) error {
+	r.log().Debugf(ctx, "trying to add instance %s to router topology in rs %s", info, rsID)
+
 	err := info.Validate()
 	if err != nil {
 		return err
@@ -69,7 +71,9 @@ func (r *Router) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceI
 	return rs.conn.Add(ctx, instance)
 }
 
-func (r *Router) RemoveInstance(_ context.Context, rsID, instanceID uuid.UUID) error {
+func (r *Router) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error {
+	r.log().Debugf(ctx, "trying to remove instance %s from router topology in rs %s", instanceID, rsID)
+
 	idToReplicasetRef := r.getIDToReplicaset()
 
 	rs := idToReplicasetRef[rsID]
@@ -81,6 +85,8 @@ func (r *Router) RemoveInstance(_ context.Context, rsID, instanceID uuid.UUID) e
 }
 
 func (r *Router) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, instances []InstanceInfo) error {
+	r.log().Debugf(ctx, "trying to add replicaset %s to router topology", rsInfo)
+
 	idToReplicasetOld := r.getIDToReplicaset()
 
 	if _, ok := idToReplicasetOld[rsInfo.UUID]; ok {
@@ -110,6 +116,16 @@ func (r *Router) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, insta
 	conn, err := pool.Connect(ctx, rsInstances)
 	if err != nil {
 		return err
+	}
+
+	poolInfo := conn.GetInfo()
+	for instName, instConnInfo := range poolInfo {
+		connectStatus := "connected now"
+		if !instConnInfo.ConnectedNow {
+			connectStatus = "not connected"
+		}
+
+		r.log().Infof(ctx, "[replicaset %s ] instnace %s %s in role %s", rsInfo, instName, connectStatus, instConnInfo.ConnRole)
 	}
 
 	isConnected, err := conn.ConnectedNow(pool.RW)
@@ -154,7 +170,9 @@ func (r *Router) AddReplicasets(ctx context.Context, replicasets map[ReplicasetI
 	return nil
 }
 
-func (r *Router) RemoveReplicaset(_ context.Context, rsID uuid.UUID) []error {
+func (r *Router) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
+	r.log().Debugf(ctx, "trying to remove replicaset %s from router topology", rsID)
+
 	idToReplicasetOld := r.getIDToReplicaset()
 
 	rs := idToReplicasetOld[rsID]

@@ -91,6 +91,7 @@ github.com/tarantool/go-iproto v1.0.0 h1:quC4hdFhCuFYaCqOFgUxH2foRkhAy+TlEy7gQLh
 github.com/tarantool/go-iproto v1.0.0/go.mod h1:LNCtdyZxojUed8SbOiYHoc3v9NvaZTB7p96hUySMlIo=
 github.com/tarantool/go-tarantool/v2 v2.1.1-0.20240507091106-8b2be0133e9d h1:L8E9ZtHsGYACsBGU6EtN3fEhLeneVnQ5KwxEeZQk6rk=
 github.com/tarantool/go-tarantool/v2 v2.1.1-0.20240507091106-8b2be0133e9d/go.mod h1:hjm1qFxll+hs9VoU74MrvwKrXZKv8WGQLhkyeDTHh7Y=
+github.com/tarantool/go-tarantool/v2 v2.1.1-0.20240922082035-592db69eed86/go.mod h1:hjm1qFxll+hs9VoU74MrvwKrXZKv8WGQLhkyeDTHh7Y=
 github.com/vmihailenco/msgpack/v5 v5.3.5 h1:5gO0H1iULLWGhs2H5tbAHIZTV8/cYafcFOr9znI5mJU=
 github.com/vmihailenco/msgpack/v5 v5.3.5/go.mod h1:7xyJ9e+0+9SaZT0Wt1RGleJXzli6Q/V5KbhBonMG9jc=
 github.com/vmihailenco/tagparser/v2 v2.0.0 h1:y09buUbR+b5aycVFQs/g70pqKVZNBmxwAhO7/IwNM9g=

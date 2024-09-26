@@ -127,6 +127,10 @@ type InstanceInfo struct {
 	UUID uuid.UUID
 }
 
+func (ii InstanceInfo) String() string {
+	return fmt.Sprintf("{name: %s, uuid: %s, addr: %s}", ii.Name, ii.UUID, ii.Addr)
+}
+
 func (ii InstanceInfo) Validate() error {
 	if ii.UUID == uuid.Nil {
 		return fmt.Errorf("%w: empty uuid", ErrInvalidInstanceInfo)
