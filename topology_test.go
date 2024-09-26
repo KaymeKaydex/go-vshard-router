@@ -22,6 +22,9 @@ func TestController_AddInstance(t *testing.T) {
 	t.Run("no such replicaset", func(t *testing.T) {
 		router := Router{
 			idToReplicaset: map[uuid.UUID]*Replicaset{},
+			cfg: Config{
+				Loggerf: &emptyLogger{},
+			},
 		}
 
 		err := router.Topology().AddInstance(ctx, uuid.New(), InstanceInfo{
@@ -34,6 +37,9 @@ func TestController_AddInstance(t *testing.T) {
 	t.Run("invalid instance info", func(t *testing.T) {
 		router := Router{
 			idToReplicaset: map[uuid.UUID]*Replicaset{},
+			cfg: Config{
+				Loggerf: &emptyLogger{},
+			},
 		}
 
 		err := router.Topology().AddInstance(ctx, uuid.New(), InstanceInfo{})
@@ -47,6 +53,9 @@ func TestController_RemoveInstance(t *testing.T) {
 	t.Run("no such replicaset", func(t *testing.T) {
 		router := Router{
 			idToReplicaset: map[uuid.UUID]*Replicaset{},
+			cfg: Config{
+				Loggerf: &emptyLogger{},
+			},
 		}
 
 		err := router.Topology().RemoveInstance(ctx, uuid.New(), uuid.New())
@@ -64,6 +73,9 @@ func TestController_RemoveReplicaset(t *testing.T) {
 	router := Router{
 		idToReplicaset: map[uuid.UUID]*Replicaset{
 			uuidToRemove: {conn: mPool},
+		},
+		cfg: Config{
+			Loggerf: &emptyLogger{},
 		},
 	}
 
@@ -87,6 +99,9 @@ func TestRouter_AddReplicaset_AlreadyExists(t *testing.T) {
 	router := Router{
 		idToReplicaset: map[uuid.UUID]*Replicaset{
 			alreadyExistingRsUUID: {},
+		},
+		cfg: Config{
+			Loggerf: &emptyLogger{},
 		},
 	}
 

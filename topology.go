@@ -125,7 +125,7 @@ func (r *Router) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, insta
 			connectStatus = "not connected"
 		}
 
-		r.log().Infof(ctx, "[replicaset %s ] instnace %s %s in role %s", rsInfo, instName, connectStatus, instConnInfo.ConnRole)
+		r.log().Infof(ctx, "[replicaset %s ] instance %s %s in role %s", rsInfo, instName, connectStatus, instConnInfo.ConnRole)
 	}
 
 	isConnected, err := conn.ConnectedNow(pool.RW)

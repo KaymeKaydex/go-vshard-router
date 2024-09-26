@@ -14,7 +14,7 @@ var (
 	_                 LogProvider  = (*StdoutLogger)(nil)
 )
 
-// A legacy interface for backward compatibility
+// LogProvider is a legacy interface for backward compatibility.
 type LogProvider interface {
 	Info(context.Context, string)
 	Debug(context.Context, string)
