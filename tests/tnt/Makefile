@@ -7,6 +7,10 @@ export NREPLICASETS:=5
 export START_PORT:=33000
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY:=YES # See review comments for PR #56 why
 
+export TT_PID_FILE:=tarantool.pid
+export TT_LOG:=tarantool.log
+export TT_BACKGROUND:=true
+
 RED=\033[0;31m
 GREEN=\033[0;32m
 YELLOW=\033[0;33m
@@ -40,8 +44,8 @@ cluster-up:
 		ln -sf `(pwd)`/cfgmaker.lua tmp/$${rsid}/master/cfgmaker.lua;					\
 		ln -sf `(pwd)`/storage.lua tmp/$${rsid}/follower/storage_$${rsid}_follower.lua;	\
 		ln -sf `(pwd)`/cfgmaker.lua tmp/$${rsid}/follower/cfgmaker.lua;					\
-		TT_WORK_DIR=tmp/$${rsid}/master/ TT_PID_FILE=tarantool.pid TT_BACKGROUND=true TT_LOG=tarantool.log tarantool tmp/$${rsid}/master/storage_$${rsid}_master.lua;		\
-		TT_WORK_DIR=tmp/$${rsid}/follower/ TT_PID_FILE=tarantool.pid TT_BACKGROUND=true TT_LOG=tarantool.log tarantool tmp/$${rsid}/follower/storage_$${rsid}_follower.lua; \
+		TT_WORK_DIR=tmp/$${rsid}/master/ tarantool tmp/$${rsid}/master/storage_$${rsid}_master.lua;			\
+		TT_WORK_DIR=tmp/$${rsid}/follower/ tarantool tmp/$${rsid}/follower/storage_$${rsid}_follower.lua;	\
 		((rsid = rsid + 1)) ; \
 	done
 
@@ -59,8 +63,7 @@ cluster-down:
 		kill -9 `cat  tmp/$${rsid}/follower/tarantool.pid`;		\
 		((rsid = rsid + 1)) ; \
 	done
-	kill -9 `cat tmp/router_work_dir/router.pid`
-	rm -rf tmp
+	kill -9 `cat tmp/router_work_dir/tarantool.pid`
 
 # run go tests, minus "-" signs before command allows failures, otherwise cluster-down stage won't run.
 gotest:
@@ -77,4 +80,4 @@ enter-proxy:
 	tarantoolctl connect 0.0.0.0:12000
 
 bench:
-	 go test -bench=. -benchmem
+	go test -bench=. -benchmem

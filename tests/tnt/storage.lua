@@ -63,7 +63,7 @@ box.once("testapp:schema:1", function()
     customer:create_index('bucket_id', {parts = {'bucket_id'}, unique = false})
 
     -- create products for easy bench
-	local products = box.schema.space.create('products')
+    local products = box.schema.space.create('products')
     products:format({
         {'id', 'uuid'},
         {'bucket_id', 'unsigned'},
