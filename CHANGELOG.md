@@ -1,5 +1,12 @@
 ## Unreleased
 
+CHANGES:
+* now if there is no etcd connection - etcd provider returns you error instead panic.
+* etcd provider also accepts context as input for working with the logger.
+
+BUG FIXES:
+* fixed the problem of re-creating a new context when starting discovery, which led to a lack of discovery logging.
+
 TESTS:
 
 * Simplify test/tnt/{Makefile,router.lua)
