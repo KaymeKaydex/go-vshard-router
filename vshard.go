@@ -176,7 +176,7 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	}
 
 	if cfg.DiscoveryMode == DiscoveryModeOn {
-		discoveryCronCtx, cancelFunc := context.WithCancel(context.Background())
+		discoveryCronCtx, cancelFunc := context.WithCancel(ctx)
 
 		// run background cron discovery loop
 		// suppress linter warning: Non-inherited new context, use function like `context.WithXXX` instead (contextcheck)
