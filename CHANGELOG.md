@@ -9,8 +9,12 @@ BUG FIXES:
 
 TESTS:
 
-* Simplify test/tnt/{Makefile,router.lua)
-* Indent fix for test/tnt/storage.lua
+* Simplify test/tnt/{Makefile,router.lua).
+* Indent fix for test/tnt/storage.lua.
+
+FEATURES:
+* now we write topology changes to debug logs.
+* now we write info logs about new replicaset adding and nodes state.
 
 ## v1.0.1
 
