@@ -1,4 +1,4 @@
-## Unreleased
+## v1.1.0
 
 CHANGES:
 * now if there is no etcd connection - etcd provider returns you error instead panic.
@@ -15,6 +15,7 @@ TESTS:
 FEATURES:
 * now we write topology changes to debug logs.
 * now we write info logs about new replicaset adding and nodes state.
+* added pull request template to repository.
 
 ## v1.0.1
 
