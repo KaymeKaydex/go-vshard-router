@@ -124,7 +124,13 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		if err != nil {
 			r.metrics().RetryOnCall("bucket_resolve_error")
 
-			return nil, nil, fmt.Errorf("cant resolve bucket %d: %w", bucketID, err)
+			// this error will be returned to a caller in case of timeout
+			err = fmt.Errorf("cant resolve bucket %d: %w", bucketID, err)
+
+			// TODO: lua vshard router just yields here and retires, no pause is applied.
+			// https://github.com/tarantool/vshard/blob/b6fdbe950a2e4557f05b83bd8b846b126ec3724e/vshard/router/init.lua#L713
+			// So we also retry here. But I guess we should add some pause here.
+			continue
 		}
 
 		r.log().Infof(ctx, "try call %s on replicaset %s for bucket %d", fnc, rs.info.Name, bucketID)
@@ -134,8 +140,6 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		var respData []interface{}
 		respData, err = future.Get()
 		if err != nil {
-			r.metrics().RetryOnCall("future_get_error")
-
 			return nil, nil, fmt.Errorf("got error on future.Get(): %w", err)
 		}
 
@@ -145,8 +149,6 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			// vshard.storage.call(func) returns up to two values:
 			// - true/false/nil
 			// - func result, omitted if func does not return anything
-			r.metrics().RetryOnCall("resp_data_error")
-
 			return nil, nil, fmt.Errorf("protocol violation %s: got empty response", vshardStorageClientCall)
 		}
 
@@ -159,24 +161,37 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			if err != nil {
 				// Something unexpected happened: we couldn't decode respData[1] as a vshardError,
 				// so return reason why and respData[1], that is supposed to be a vshardError.
-				r.metrics().RetryOnCall("internal_error")
-
 				return nil, nil, fmt.Errorf("cant decode vhsard err by trarantool with err: %v (%v)", err, respData[1])
 			}
 
 			switch vshardError.Name {
-			case "WRONG_BUCKET", "BUCKET_IS_LOCKED", "TRANSFER_IS_IN_PROGRESS":
+			case "WRONG_BUCKET", "BUCKET_IS_LOCKED":
 				r.BucketReset(bucketID)
+
+				// TODO we should inspect here err.destination like lua vshard router does,
+				// but we don't support vshard error fully yet:
+				// https://github.com/KaymeKaydex/go-vshard-router/issues/94
+				// So we just retry here as a temporary solution.
 				r.metrics().RetryOnCall("bucket_migrate")
 
-				r.log().Debugf(ctx, "retrying %s cause bucket in migrate state (%s)", fnc, vshardError.Error())
+				r.log().Debugf(ctx, "retrying fnc '%s' cause got vshard error: %v", fnc, &vshardError)
 
 				// this vshardError will be returned to a caller in case of timeout
 				err = &vshardError
 				continue
+			case "TRANSFER_IS_IN_PROGRESS":
+				// Since lua vshard router doesn't retry here, we don't retry too.
+				// There is a comment why lua vshard router doesn't retry:
+				// https://github.com/tarantool/vshard/blob/b6fdbe950a2e4557f05b83bd8b846b126ec3724e/vshard/router/init.lua#L697
+				r.BucketReset(bucketID)
+				return nil, nil, &vshardError
+			case "NON_MASTER":
+				// We don't know how to handle this case yet, so just return it for now.
+				// Here is issue for it: https://github.com/KaymeKaydex/go-vshard-router/issues/88
+				return nil, nil, &vshardError
+			default:
+				return nil, nil, &vshardError
 			}
-
-			return nil, nil, &vshardError
 		}
 
 		var isVShardRespOk bool
