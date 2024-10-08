@@ -261,6 +261,10 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 				}
 
 				bucketsDiscoveryPaginationFrom = resp.NextFrom
+
+				// Don't spam many requests at once. Give storages time to handle them and other requests.
+				// https://github.com/tarantool/vshard/blob/b6fdbe950a2e4557f05b83bd8b846b126ec3724e/vshard/router/init.lua#L308
+				time.Sleep(r.cfg.DiscoveryWorkStep)
 			}
 		})
 	}
