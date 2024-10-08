@@ -86,15 +86,21 @@ func (r *Router) setConsistentView(view *consistentView) {
 
 type Config struct {
 	// Providers
-	Logger           LogProvider      // Logger is not required, legacy interface
-	Loggerf          LogfProvider     // Loggerf is not required, new interface
+	// Loggerf injects a custom logger. By default there is no logger is used.
+	Loggerf          LogfProvider     // Loggerf is not required
 	Metrics          MetricsProvider  // Metrics is not required
 	TopologyProvider TopologyProvider // TopologyProvider is required provider
 
 	// Discovery
 	// DiscoveryTimeout is timeout between cron discovery job; by default there is no timeout.
-	DiscoveryTimeout time.Duration
-	DiscoveryMode    DiscoveryMode
+	DiscoveryTimeout  time.Duration
+	DiscoveryWorkStep time.Duration
+	DiscoveryMode     DiscoveryMode
+
+	// BucketsSearchMode defines policy for BucketDiscovery method.
+	// Default value is BucketsSearchLegacy.
+	// See BucketsSearchMode constants for more detail.
+	BucketsSearchMode BucketsSearchMode
 
 	TotalBucketCount uint64
 	User             string
@@ -229,6 +235,7 @@ func (r *Router) RouteMapClean() {
 
 func prepareCfg(cfg Config) (Config, error) {
 	const discoveryTimeoutDefault = 1 * time.Minute
+	const discoveryWorkStepDefault = 10 * time.Millisecond
 
 	err := validateCfg(cfg)
 	if err != nil {
@@ -239,12 +246,18 @@ func prepareCfg(cfg Config) (Config, error) {
 		cfg.DiscoveryTimeout = discoveryTimeoutDefault
 	}
 
+	if cfg.DiscoveryWorkStep == 0 {
+		cfg.DiscoveryWorkStep = discoveryWorkStepDefault
+	}
+
 	if cfg.Loggerf == nil {
-		if cfg.Logger != nil {
-			cfg.Loggerf = &legacyLoggerProxy{l: cfg.Logger}
-		} else {
-			cfg.Loggerf = emptyLogfProvider
-		}
+		cfg.Loggerf = emptyLogfProvider
+	}
+
+	// Log tarantool internal events using the same logger as router uses.
+	cfg.PoolOpts.Logger = tarantoolOptsLogger{
+		loggerf: cfg.Loggerf,
+		ctx:     context.Background(),
 	}
 
 	if cfg.Metrics == nil {

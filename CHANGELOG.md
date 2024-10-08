@@ -1,9 +1,28 @@
 ## Unreleased
 
+CHANGES:
+* We don't support LogProvider interface anymore, only LogfProvider should be used.
+
 BUG FIXES:
 * RouterCallImpl: retry on BucketResolve error.
 * RouterCallImpl: do not retry on vshard error "TRANSFER_IS_IN_PROGRESS".
 * RouterCallImpl: remove misleading RetryOnCall.
+* AddInstance bugfix: pass r.cfg.PoolOpts to new instance.
+
+FEATURES:
+
+* Support StdoutLoggerf that allows control log level (resolve issue #84).
+* Implement go-tarantool Logger interface to use the same logger as router uses (resolve issue #79).
+* Support new BucketsSearchMode config to set policy for BucketDiscovery (resolve #71).
+
+REFACTOR:
+
+* Func bucketSearchLegacy: log error from bucketStatWait (except bucketStatError).
+* New bucketsDiscoveryAsync, bucketsDiscoveryWait, bucketsDiscovery methods for buckets discovery pagination.
+* Support bucketSearchBatched method for batched buckets discovery (resolve #71).
+
+TESTS:
+* Tests for BucketsSearchMode (tnt/discovery_test.go).
 
 ## v1.1.0
 

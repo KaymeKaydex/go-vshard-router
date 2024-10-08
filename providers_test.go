@@ -12,7 +12,7 @@ import (
 
 var (
 	emptyMetrics = vshardrouter.EmptyMetrics{}
-	stdoutLogger = vshardrouter.StdoutLogger{}
+	stdoutLogger = vshardrouter.StdoutLoggerf{}
 )
 
 func TestEmptyMetrics_RetryOnCall(t *testing.T) {
@@ -37,15 +37,15 @@ func TestStdoutLogger(t *testing.T) {
 	ctx := context.TODO()
 
 	require.NotPanics(t, func() {
-		stdoutLogger.Error(ctx, "")
+		stdoutLogger.Errorf(ctx, "")
 	})
 	require.NotPanics(t, func() {
-		stdoutLogger.Info(ctx, "")
+		stdoutLogger.Infof(ctx, "")
 	})
 	require.NotPanics(t, func() {
-		stdoutLogger.Warn(ctx, "")
+		stdoutLogger.Warnf(ctx, "")
 	})
 	require.NotPanics(t, func() {
-		stdoutLogger.Debug(ctx, "")
+		stdoutLogger.Debugf(ctx, "")
 	})
 }
