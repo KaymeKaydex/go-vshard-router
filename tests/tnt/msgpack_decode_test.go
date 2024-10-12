@@ -39,5 +39,6 @@ func TestMsgpackDecodeErrors(t *testing.T) {
 		"non-existing",
 		[]interface{}{&Product{Name: "test-go", BucketID: bucketID, ID: id.String(), Count: 3}})
 
-	require.NoError(t, err)
+	// TODO: errors is must work here
+	require.Error(t, err)
 }
