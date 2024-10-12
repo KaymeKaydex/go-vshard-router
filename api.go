@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
-
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // --------------------------------------------------------------------------------
@@ -27,16 +27,61 @@ func (c VshardMode) String() string {
 	return string(c)
 }
 
-type storageCallAssertError struct {
-	Code     int         `msgpack:"code"`
-	BaseType string      `msgpack:"base_type"`
-	Type     string      `msgpack:"type"`
-	Message  string      `msgpack:"message"`
-	Trace    interface{} `msgpack:"trace"`
+type StorageCallAssertErrorResponse struct {
+	Ok bool `msgpack:",omitempty"`
+	assertError
 }
 
-func (s storageCallAssertError) Error() string {
-	type alias storageCallAssertError
+type assertError struct {
+	Code     int                      `msgpack:"code"`
+	BaseType string                   `msgpack:"base_type"`
+	Type     string                   `msgpack:"type"`
+	Message  string                   `msgpack:"message"`
+	Trace    []map[string]interface{} `msgpack:"trace"`
+}
+
+// DecodeMsgpack is specific method for msgpack decoding,
+// cause tarantool vshard error responses as 2 values array
+func (s *StorageCallAssertErrorResponse) DecodeMsgpack(d *msgpack.Decoder) error {
+	var ok bool
+
+	arrayLen, err := d.DecodeArrayLen()
+	if err != nil {
+		return err
+	}
+
+	if arrayLen == 0 {
+		return fmt.Errorf("invalid array length: %d", arrayLen)
+	}
+
+	ok, err = d.DecodeBool()
+	if err != nil {
+		return fmt.Errorf("failed to decode status: %w", err)
+	}
+
+	s.Ok = ok
+
+	if s.Ok {
+		return nil
+	}
+
+	if arrayLen != 2 {
+		return fmt.Errorf("protocol violation: response length is %d when respData[0] is false", arrayLen)
+	}
+
+	st := &assertError{}
+	err = d.Decode(st)
+	if err != nil {
+		return fmt.Errorf("failed to decode storage assert error: %w", err)
+	}
+
+	s.assertError = *st
+
+	return nil
+}
+
+func (s StorageCallAssertErrorResponse) Error() string {
+	type alias StorageCallAssertErrorResponse
 	return fmt.Sprintf("%+v", alias(s))
 }
 
@@ -194,28 +239,15 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			}
 		}
 
-		var isVShardRespOk bool
-		err = future.GetTyped(&[]interface{}{&isVShardRespOk})
+		var assError StorageCallAssertErrorResponse
+
+		err = future.GetTyped(&assError)
 		if err != nil {
-			return nil, nil, fmt.Errorf("protocol violation %s: can't decode respData[0] as boolean: %v", vshardStorageClientCall, err)
+			return nil, nil, fmt.Errorf("%s: %s failed %v (decoding to assertError failed %v)", vshardStorageClientCall, fnc, respData[1], err)
 		}
 
-		if !isVShardRespOk {
-			// Since we got respData[0] == false, it means that an error has happened
-			// while executing user-defined function on vshard storage.
-			// In this case, vshard storage must return a pair: false, error.
-			if len(respData) != 2 {
-				return nil, nil, fmt.Errorf("protocol violation %s: response length is %d when respData[0] is false", vshardStorageClientCall, len(respData))
-			}
-
-			var assertError storageCallAssertError
-			err = mapstructure.Decode(respData[1], &assertError)
-			if err != nil {
-				// We could not decode respData[1] as assertError, so return respData[1] as is, add info why we could not decode.
-				return nil, nil, fmt.Errorf("%s: %s failed %v (decoding to assertError failed %v)", vshardStorageClientCall, fnc, respData[1], err)
-			}
-
-			return nil, nil, fmt.Errorf("%s: %s failed: %+v", vshardStorageClientCall, fnc, assertError)
+		if !assError.Ok {
+			return nil, nil, fmt.Errorf("%s: %s failed: %+v", vshardStorageClientCall, fnc, assError)
 		}
 
 		r.metrics().RequestDuration(time.Since(timeStart), true, false)
@@ -225,7 +257,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 				return nil
 			}
 
-			var stub interface{}
+			var stub bool
 
 			return future.GetTyped(&[]interface{}{&stub, result})
 		}, nil
@@ -361,7 +393,7 @@ func (r *Router) RouterMapCallRWImpl(
 				return nil, fmt.Errorf("protocol violation: invalid respData length when respData[0] == nil, must be = 2, current: %d", len(respData))
 			}
 
-			var assertError storageCallAssertError
+			var assertError StorageCallAssertErrorResponse
 			err = mapstructure.Decode(respData[1], &assertError)
 			if err != nil {
 				// We could not decode respData[1] as assertError, so return respData[1] as is, add info why we could not decode.
