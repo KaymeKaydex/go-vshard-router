@@ -27,7 +27,7 @@ func (c VshardMode) String() string {
 	return string(c)
 }
 
-type StorageCallAssertErrorResponse struct {
+type StorageCallAssertResponseError struct {
 	Ok bool `msgpack:",omitempty"`
 	assertError
 }
@@ -42,7 +42,7 @@ type assertError struct {
 
 // DecodeMsgpack is specific method for msgpack decoding,
 // cause tarantool vshard error responses as 2 values array
-func (s *StorageCallAssertErrorResponse) DecodeMsgpack(d *msgpack.Decoder) error {
+func (s *StorageCallAssertResponseError) DecodeMsgpack(d *msgpack.Decoder) error {
 	var ok bool
 
 	arrayLen, err := d.DecodeArrayLen()
@@ -80,8 +80,8 @@ func (s *StorageCallAssertErrorResponse) DecodeMsgpack(d *msgpack.Decoder) error
 	return nil
 }
 
-func (s StorageCallAssertErrorResponse) Error() string {
-	type alias StorageCallAssertErrorResponse
+func (s StorageCallAssertResponseError) Error() string {
+	type alias StorageCallAssertResponseError
 	return fmt.Sprintf("%+v", alias(s))
 }
 
@@ -239,7 +239,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			}
 		}
 
-		var assError StorageCallAssertErrorResponse
+		var assError StorageCallAssertResponseError
 
 		err = future.GetTyped(&assError)
 		if err != nil {
@@ -393,7 +393,7 @@ func (r *Router) RouterMapCallRWImpl(
 				return nil, fmt.Errorf("protocol violation: invalid respData length when respData[0] == nil, must be = 2, current: %d", len(respData))
 			}
 
-			var assertError StorageCallAssertErrorResponse
+			var assertError StorageCallAssertResponseError
 			err = mapstructure.Decode(respData[1], &assertError)
 			if err != nil {
 				// We could not decode respData[1] as assertError, so return respData[1] as is, add info why we could not decode.
