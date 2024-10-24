@@ -122,7 +122,7 @@ func TestCalculateEtalonBalance(t *testing.T) {
 			expectError:    false,
 		},
 		{
-			name: "ZeroWeights",
+			name: "ZeroWeight",
 			replicasets: []Replicaset{
 				{info: ReplicasetInfo{Weight: 0, PinnedCount: 0, IgnoreDisbalance: false}},
 				{info: ReplicasetInfo{Weight: 1, PinnedCount: 0, IgnoreDisbalance: false}},
@@ -130,6 +130,25 @@ func TestCalculateEtalonBalance(t *testing.T) {
 			bucketCount:    10,
 			expectError:    false,
 			expectedCounts: []int{0, 10},
+		},
+		{
+			name: "ZeroAllWeights",
+			replicasets: []Replicaset{
+				{info: ReplicasetInfo{Weight: 0, PinnedCount: 0, IgnoreDisbalance: false}},
+				{info: ReplicasetInfo{Weight: 0, PinnedCount: 0, IgnoreDisbalance: false}},
+			},
+			bucketCount: 10,
+			expectError: true,
+		},
+		{
+			name: "UnevenDistribution",
+			replicasets: []Replicaset{
+				{info: ReplicasetInfo{Weight: 1, PinnedCount: 0, IgnoreDisbalance: false}},
+				{info: ReplicasetInfo{Weight: 2, PinnedCount: 0, IgnoreDisbalance: false}},
+			},
+			bucketCount:    7,
+			expectError:    false,
+			expectedCounts: []int{2, 5},
 		},
 	}
 
