@@ -91,3 +91,79 @@ func TestReplicaset_BucketStat(t *testing.T) {
 		...
 	*/
 }
+
+func TestCalculateEtalonBalance(t *testing.T) {
+	tests := []struct {
+		name           string
+		replicasets    []Replicaset
+		bucketCount    int
+		expectedCounts []int
+		expectError    bool
+	}{
+		{
+			name: "FullBalance",
+			replicasets: []Replicaset{
+				{info: ReplicasetInfo{Weight: 1, PinnedCount: 0, IgnoreDisbalance: false}},
+				{info: ReplicasetInfo{Weight: 1, PinnedCount: 0, IgnoreDisbalance: false}},
+				{info: ReplicasetInfo{Weight: 1, PinnedCount: 0, IgnoreDisbalance: false}},
+			},
+			bucketCount:    9,
+			expectedCounts: []int{3, 3, 3},
+			expectError:    false,
+		},
+		{
+			name: "PinnedMoreThanWeight",
+			replicasets: []Replicaset{
+				{info: ReplicasetInfo{Weight: 1, PinnedCount: 60, IgnoreDisbalance: false}},
+				{info: ReplicasetInfo{Weight: 1, PinnedCount: 0, IgnoreDisbalance: false}},
+			},
+			bucketCount:    100,
+			expectedCounts: []int{60, 40},
+			expectError:    false,
+		},
+		{
+			name: "ZeroWeight",
+			replicasets: []Replicaset{
+				{info: ReplicasetInfo{Weight: 0, PinnedCount: 0, IgnoreDisbalance: false}},
+				{info: ReplicasetInfo{Weight: 1, PinnedCount: 0, IgnoreDisbalance: false}},
+			},
+			bucketCount:    10,
+			expectError:    false,
+			expectedCounts: []int{0, 10},
+		},
+		{
+			name: "ZeroAllWeights",
+			replicasets: []Replicaset{
+				{info: ReplicasetInfo{Weight: 0, PinnedCount: 0, IgnoreDisbalance: false}},
+				{info: ReplicasetInfo{Weight: 0, PinnedCount: 0, IgnoreDisbalance: false}},
+			},
+			bucketCount: 10,
+			expectError: true,
+		},
+		{
+			name: "UnevenDistribution",
+			replicasets: []Replicaset{
+				{info: ReplicasetInfo{Weight: 1, PinnedCount: 0, IgnoreDisbalance: false}},
+				{info: ReplicasetInfo{Weight: 2, PinnedCount: 0, IgnoreDisbalance: false}},
+			},
+			bucketCount:    7,
+			expectError:    false,
+			expectedCounts: []int{2, 5},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := CalculateEtalonBalance(tt.replicasets, tt.bucketCount)
+
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				for i, expectedCount := range tt.expectedCounts {
+					require.Equal(t, expectedCount, tt.replicasets[i].EtalonBucketCount)
+				}
+			}
+		})
+	}
+}
