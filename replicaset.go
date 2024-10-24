@@ -151,6 +151,46 @@ func (rs *Replicaset) CallAsync(ctx context.Context, opts ReplicasetCallOpts, fn
 	return rs.conn.Do(req, opts.PoolMode)
 }
 
+func (rs *Replicaset) bucketsDiscoveryAsync(ctx context.Context, from uint64) *tarantool.Future {
+	const bucketsDiscoveryFnc = "vshard.storage.buckets_discovery"
+
+	var bucketsDiscoveryPaginationRequest = struct {
+		From uint64 `msgpack:"from"`
+	}{From: from}
+
+	req := tarantool.NewCallRequest(bucketsDiscoveryFnc).
+		Context(ctx).
+		Args([]interface{}{&bucketsDiscoveryPaginationRequest})
+
+	future := rs.conn.Do(req, pool.PreferRO)
+
+	return future
+}
+
+type bucketsDiscoveryResp struct {
+	Buckets  []uint64 `msgpack:"buckets"`
+	NextFrom uint64   `msgpack:"next_from"`
+}
+
+func bucketsDiscoveryWait(future *tarantool.Future) (bucketsDiscoveryResp, error) {
+	// We intentionally don't support old vshard storages that mentioned here:
+	// https://github.com/tarantool/vshard/blob/8d299bfecff8bc656056658350ad48c829f9ad3f/vshard/router/init.lua#L343
+	var resp bucketsDiscoveryResp
+
+	err := future.GetTyped(&[]interface{}{&resp})
+	if err != nil {
+		return resp, fmt.Errorf("future.GetTyped() failed: %v", err)
+	}
+
+	return resp, nil
+}
+
+func (rs *Replicaset) bucketsDiscovery(ctx context.Context, from uint64) (bucketsDiscoveryResp, error) {
+	future := rs.bucketsDiscoveryAsync(ctx, from)
+
+	return bucketsDiscoveryWait(future)
+}
+
 // CalculateEtalonBalance computes the ideal bucket count for each replicaset.
 // This iterative algorithm seeks the optimal balance within a cluster by
 // calculating the ideal bucket count for each replicaset at every step.

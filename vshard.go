@@ -96,6 +96,11 @@ type Config struct {
 	DiscoveryTimeout time.Duration
 	DiscoveryMode    DiscoveryMode
 
+	// BucketsSearchMode defines policy for BucketDiscovery method.
+	// Default value is BucketsSearchLegacy.
+	// See BucketsSearchMode constants for more detail.
+	BucketsSearchMode BucketsSearchMode
+
 	TotalBucketCount uint64
 	User             string
 	Password         string
