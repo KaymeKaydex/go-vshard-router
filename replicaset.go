@@ -3,6 +3,7 @@ package vshard_router //nolint:revive
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,8 +13,11 @@ import (
 )
 
 type ReplicasetInfo struct {
-	Name string
-	UUID uuid.UUID
+	Name             string
+	UUID             uuid.UUID
+	Weight           float64
+	PinnedCount      int
+	IgnoreDisbalance bool
 }
 
 func (rsi ReplicasetInfo) String() string {
@@ -26,8 +30,9 @@ type ReplicasetCallOpts struct {
 }
 
 type Replicaset struct {
-	conn pool.Pooler
-	info ReplicasetInfo
+	conn              pool.Pooler
+	info              ReplicasetInfo
+	EtalonBucketCount int
 }
 
 func (rs *Replicaset) String() string {
@@ -128,7 +133,7 @@ func (rs *Replicaset) ReplicaCall(
 	}, nil
 }
 
-// Call sends async request to remote storage
+// CallAsync sends async request to remote storage
 func (rs *Replicaset) CallAsync(ctx context.Context, opts ReplicasetCallOpts, fnc string, args interface{}) *tarantool.Future {
 	if opts.Timeout > 0 {
 		// Don't set any timeout by default, parent context timeout would be inherited in this case.
@@ -184,4 +189,89 @@ func (rs *Replicaset) bucketsDiscovery(ctx context.Context, from uint64) (bucket
 	future := rs.bucketsDiscoveryAsync(ctx, from)
 
 	return bucketsDiscoveryWait(future)
+}
+
+// CalculateEtalonBalance computes the ideal bucket count for each replicaset.
+// This iterative algorithm seeks the optimal balance within a cluster by
+// calculating the ideal bucket count for each replicaset at every step.
+// If the ideal count cannot be achieved due to pinned buckets, the algorithm
+// makes a best effort to approximate balance by ignoring the replicaset with
+// pinned buckets and its associated pinned count. After each iteration, a new
+// balance is recalculated. However, this can lead to scenarios where the
+// conditions are still unmet; ignoring pinned buckets in overloaded
+// replicasets can reduce the ideal bucket count in others, potentially
+// causing new values to fall below their pinned count.
+//
+// At each iteration, the algorithm either concludes or disregards at least
+// one new overloaded replicaset. Therefore, its time complexity is O(N^2),
+// where N is the number of replicasets.
+// based on  https://github.com/tarantool/vshard/blob/master/vshard/replicaset.lua#L1358
+func CalculateEtalonBalance(replicasets []Replicaset, bucketCount int) error {
+	isBalanceFound := false
+	weightSum := 0.0
+	stepCount := 0
+	replicasetCount := len(replicasets)
+
+	// Calculate total weight
+	for _, replicaset := range replicasets {
+		weightSum += replicaset.info.Weight
+	}
+
+	// Balance calculation loop
+	for !isBalanceFound {
+		stepCount++
+		if weightSum <= 0 {
+			return fmt.Errorf("weightSum should be greater than 0")
+		}
+
+		bucketPerWeight := float64(bucketCount) / weightSum
+		bucketsCalculated := 0
+
+		// Calculate etalon bucket count for each replicaset
+		for i := range replicasets {
+			if !replicasets[i].info.IgnoreDisbalance {
+				replicasets[i].EtalonBucketCount = int(math.Ceil(replicasets[i].info.Weight * bucketPerWeight))
+				bucketsCalculated += replicasets[i].EtalonBucketCount
+			}
+		}
+
+		bucketsRest := bucketsCalculated - bucketCount
+		isBalanceFound = true
+
+		// Spread disbalance and check for pinned buckets
+		for i := range replicasets {
+			if !replicasets[i].info.IgnoreDisbalance {
+				if bucketsRest > 0 {
+					n := replicasets[i].info.Weight * bucketPerWeight
+					ceil := math.Ceil(n)
+					floor := math.Floor(n)
+					if replicasets[i].EtalonBucketCount > 0 && ceil != floor {
+						replicasets[i].EtalonBucketCount--
+						bucketsRest--
+					}
+				}
+
+				// Handle pinned buckets
+				pinned := replicasets[i].info.PinnedCount
+				if pinned > 0 && replicasets[i].EtalonBucketCount < pinned {
+					isBalanceFound = false
+					bucketCount -= pinned
+					replicasets[i].EtalonBucketCount = pinned
+					replicasets[i].info.IgnoreDisbalance = true
+					weightSum -= replicasets[i].info.Weight
+				}
+			}
+		}
+
+		if bucketsRest != 0 {
+			return fmt.Errorf("bucketsRest should be 0")
+		}
+
+		// Safety check to prevent infinite loops
+		if stepCount > replicasetCount {
+			return fmt.Errorf("PANIC: the rebalancer is broken")
+		}
+	}
+
+	return nil
 }

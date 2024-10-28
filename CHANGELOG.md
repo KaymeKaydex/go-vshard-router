@@ -12,6 +12,7 @@ FEATURES:
 
 * Support StdoutLoggerf that allows control log level (resolve issue #84).
 * Support new BucketsSearchMode config to set policy for BucketDiscovery (resolve #71).
+* Implemented CalculateEtalonBalance based on lua router (part of #32).
 
 REFACTOR:
 
