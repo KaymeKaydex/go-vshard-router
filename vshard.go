@@ -155,7 +155,7 @@ func (ii InstanceInfo) Validate() error {
 func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	var err error
 
-	cfg, err = prepareCfg(cfg)
+	cfg, err = prepareCfg(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ func (r *Router) RouteMapClean() {
 	r.setConsistentView(newView)
 }
 
-func prepareCfg(cfg Config) (Config, error) {
+func prepareCfg(ctx context.Context, cfg Config) (Config, error) {
 	const discoveryTimeoutDefault = 1 * time.Minute
 
 	err := validateCfg(cfg)
@@ -246,6 +246,12 @@ func prepareCfg(cfg Config) (Config, error) {
 
 	if cfg.Loggerf == nil {
 		cfg.Loggerf = emptyLogfProvider
+	}
+
+	// Log tarantool internal events using the same logger as router uses.
+	cfg.PoolOpts.Logger = tarantoolOptsLogger{
+		loggerf: cfg.Loggerf,
+		ctx:     ctx,
 	}
 
 	if cfg.Metrics == nil {

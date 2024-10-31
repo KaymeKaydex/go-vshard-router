@@ -7,12 +7,14 @@ BUG FIXES:
 * RouterCallImpl: retry on BucketResolve error.
 * RouterCallImpl: do not retry on vshard error "TRANSFER_IS_IN_PROGRESS".
 * RouterCallImpl: remove misleading RetryOnCall.
+* AddInstance bugfix: pass r.cfg.PoolOpts to new instance.
 
 FEATURES:
 
 * Support StdoutLoggerf that allows control log level (resolve issue #84).
 * Support new BucketsSearchMode config to set policy for BucketDiscovery (resolve #71).
 * Implemented CalculateEtalonBalance based on lua router (part of #32).
+* Implement go-tarantool Logger interface to use the same logger as router uses (resolve issue #79).
 
 REFACTOR:
 
