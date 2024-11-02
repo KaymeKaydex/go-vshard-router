@@ -30,7 +30,7 @@ func TestReplicasetReplicaCall(t *testing.T) {
 		Password:         defaultTntPassword,
 	})
 
-	require.Nil(t, err, "NewRouter finished successfully")
+	require.NoError(t, err, "NewRouter finished successfully")
 
 	rsMap := router.RouterRouteAll()
 
@@ -204,4 +204,32 @@ func TestReplicsetCallAsync(t *testing.T) {
 	future = rs.CallAsync(ctx, callOpts, "raise_client_error", nil)
 	_, err = future.Get()
 	require.NotNil(t, err, "raise_client_error returns error")
+}
+
+func TestReplicasetBucketsCount(t *testing.T) {
+	skipOnInvalidRun(t)
+
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cfg := getCfg()
+
+	router, err := vshardrouter.NewRouter(ctx, vshardrouter.Config{
+		TopologyProvider: static.NewProvider(cfg),
+		DiscoveryTimeout: 5 * time.Second,
+		DiscoveryMode:    vshardrouter.DiscoveryModeOn,
+		TotalBucketCount: totalBucketCount,
+		User:             defaultTntUser,
+		Password:         defaultTntPassword,
+	})
+
+	require.NoError(t, err, "NewRouter finished successfully")
+	for _, rs := range router.RouterRouteAll() {
+		count := uint64(0)
+
+		count, err = rs.BucketsCount(ctx)
+		require.NoError(t, err)
+		require.NotEqual(t, count, 0)
+	}
 }

@@ -320,3 +320,54 @@ func (r *Router) RouterBucketCount() uint64 {
 // todo: router_make_api
 // todo: router_enable
 // todo: router_disable
+
+// -------------------------------------------------------------------------------_
+// -- Bootstrap
+// --------------------------------------------------------------------------------
+
+// ClusterBootstrap initializes the cluster by bootstrapping the necessary buckets
+// across the available replicasets. It checks the current state of each replicaset
+// and creates buckets if required. The function takes a context for managing
+// cancellation and deadlines, and a boolean parameter ifNotBootstrapped to control
+// error handling. If ifNotBootstrapped is true, the function will log any errors
+// encountered during the bootstrapping process but will not halt execution; instead,
+// it will return the last error encountered. If ifNotBootstrapped is false, any
+// error will result in an immediate return, ensuring that the operation either
+// succeeds fully or fails fast.
+func (r *Router) ClusterBootstrap(ctx context.Context, ifNotBootstrapped bool) error {
+	rssToBootstrap := make([]Replicaset, 0, len(r.idToReplicaset))
+	var lastErr error
+
+	for _, rs := range r.idToReplicaset {
+		rssToBootstrap = append(rssToBootstrap, *rs)
+	}
+
+	err := CalculateEtalonBalance(rssToBootstrap, r.cfg.TotalBucketCount)
+	if err != nil {
+		return err
+	}
+
+	bucketID := uint64(1)
+	for id, rs := range rssToBootstrap {
+		if rs.EtalonBucketCount > 0 {
+			err = rs.BucketForceCreate(ctx, bucketID, rs.EtalonBucketCount)
+			if err != nil {
+				if ifNotBootstrapped {
+					lastErr = err
+				} else {
+					return err
+				}
+			} else {
+				nextBucketID := bucketID + rs.EtalonBucketCount
+				r.log().Infof(ctx, "Buckets from %d to %d are bootstrapped on \"%s\"", bucketID, nextBucketID-1, id)
+				bucketID = nextBucketID
+			}
+		}
+	}
+
+	if lastErr != nil {
+		return lastErr
+	}
+
+	return nil
+}

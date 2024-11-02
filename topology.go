@@ -95,10 +95,7 @@ func (r *Router) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, insta
 	}
 
 	replicaset := &Replicaset{
-		info: ReplicasetInfo{
-			Name: rsInfo.Name,
-			UUID: rsInfo.UUID,
-		},
+		info: rsInfo,
 	}
 
 	rsInstances := make([]pool.Instance, 0, len(instances))

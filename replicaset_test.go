@@ -96,8 +96,8 @@ func TestCalculateEtalonBalance(t *testing.T) {
 	tests := []struct {
 		name           string
 		replicasets    []Replicaset
-		bucketCount    int
-		expectedCounts []int
+		bucketCount    uint64
+		expectedCounts []uint64
 		expectError    bool
 	}{
 		{
@@ -108,7 +108,7 @@ func TestCalculateEtalonBalance(t *testing.T) {
 				{info: ReplicasetInfo{Weight: 1, PinnedCount: 0, IgnoreDisbalance: false}},
 			},
 			bucketCount:    9,
-			expectedCounts: []int{3, 3, 3},
+			expectedCounts: []uint64{3, 3, 3},
 			expectError:    false,
 		},
 		{
@@ -118,7 +118,7 @@ func TestCalculateEtalonBalance(t *testing.T) {
 				{info: ReplicasetInfo{Weight: 1, PinnedCount: 0, IgnoreDisbalance: false}},
 			},
 			bucketCount:    100,
-			expectedCounts: []int{60, 40},
+			expectedCounts: []uint64{60, 40},
 			expectError:    false,
 		},
 		{
@@ -129,7 +129,7 @@ func TestCalculateEtalonBalance(t *testing.T) {
 			},
 			bucketCount:    10,
 			expectError:    false,
-			expectedCounts: []int{0, 10},
+			expectedCounts: []uint64{0, 10},
 		},
 		{
 			name: "ZeroAllWeights",
@@ -148,7 +148,7 @@ func TestCalculateEtalonBalance(t *testing.T) {
 			},
 			bucketCount:    7,
 			expectError:    false,
-			expectedCounts: []int{2, 5},
+			expectedCounts: []uint64{2, 5},
 		},
 	}
 

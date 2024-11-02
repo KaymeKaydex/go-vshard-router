@@ -15,6 +15,7 @@ FEATURES:
 * Support new BucketsSearchMode config to set policy for BucketDiscovery (resolve #71).
 * Implemented CalculateEtalonBalance based on lua router (part of #32).
 * Implement go-tarantool Logger interface to use the same logger as router uses (resolve issue #79).
+* Implemented ClusterBootstrap function based on lua router (#32).
 
 REFACTOR:
 
@@ -24,6 +25,8 @@ REFACTOR:
 
 TESTS:
 * Tests for BucketsSearchMode (tnt/discovery_test.go).
+* The tests have been rewritten in such a way that now you can configure the cluster to suit any needs, the configuration of the clusters may differ and the launch is controlled from go.
+* Legacy integration tests removed (tests/integration).
 
 ## v1.1.0
 
