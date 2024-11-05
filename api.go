@@ -82,9 +82,12 @@ func (s *VShardResponse) DecodeMsgpack(d *msgpack.Decoder) error {
 			return nil // data can be empty
 		}
 
-		data := make([]interface{}, arrayLen-1)
+		data := make([]interface{}, 0, arrayLen-1)
 		for i := 1; i < arrayLen; i++ {
-			data[i-1], err = d.DecodeInterface()
+			var face interface{}
+			face, err = d.DecodeInterface()
+
+			data = append(data, face)
 		}
 
 		s.data = data
