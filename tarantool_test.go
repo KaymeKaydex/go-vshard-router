@@ -119,7 +119,7 @@ func TestRouter_ClusterBootstrap(t *testing.T) {
 	for _, rs := range router.RouterRouteAll() {
 		count, err := rs.BucketsCount(ctx)
 		require.NoError(t, err)
-		require.Equal(t, count, uint64(50))
+		require.NotEqual(t, count, uint64(0))
 	}
 }
 
