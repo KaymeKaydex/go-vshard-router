@@ -78,10 +78,6 @@ func (s *VShardResponse) DecodeMsgpack(d *msgpack.Decoder) error {
 
 	// that means we have no assert errors and response ok
 	if assertBoolOk {
-		if arrayLen == 1 {
-			return nil // data can be empty
-		}
-
 		data := make([]interface{}, 0, arrayLen-1)
 		for i := 1; i < arrayLen; i++ {
 			var face interface{}
