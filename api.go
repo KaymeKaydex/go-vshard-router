@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
 	"github.com/vmihailenco/msgpack/v5"
@@ -86,11 +85,6 @@ func (s *VShardResponse) DecodeMsgpack(d *msgpack.Decoder) error {
 	}
 }
 
-type StorageCallAssertResponseError struct {
-	Ok bool `msgpack:",omitempty"`
-	assertError
-}
-
 type assertError struct {
 	Code     int                      `msgpack:"code"`
 	BaseType string                   `msgpack:"base_type"`
@@ -99,48 +93,11 @@ type assertError struct {
 	Trace    []map[string]interface{} `msgpack:"trace"`
 }
 
-// DecodeMsgpack is specific method for msgpack decoding,
-// cause tarantool vshard error responses as 2 values array
-func (s *StorageCallAssertResponseError) DecodeMsgpack(d *msgpack.Decoder) error {
-	var ok bool
-
-	arrayLen, err := d.DecodeArrayLen()
-	if err != nil {
-		return err
-	}
-
-	if arrayLen == 0 {
-		return fmt.Errorf("invalid array length: %d", arrayLen)
-	}
-
-	ok, err = d.DecodeBool()
-	if err != nil {
-		return fmt.Errorf("failed to decode status: %w", err)
-	}
-
-	s.Ok = ok
-
-	if s.Ok {
-		return nil
-	}
-
-	if arrayLen != 2 {
-		return fmt.Errorf("protocol violation: response length is %d when respData[0] is false", arrayLen)
-	}
-
-	st := &assertError{}
-	err = d.Decode(st)
-	if err != nil {
-		return fmt.Errorf("failed to decode storage assert error: %w", err)
-	}
-
-	s.assertError = *st
-
-	return nil
-}
-
-func (s StorageCallAssertResponseError) Error() string {
-	type alias StorageCallAssertResponseError
+func (s assertError) Error() string {
+	// Just print struct as is, use hack with alias type to avoid recursion:
+	// %v attempts to call Error() method for s, which is recursion.
+	// This alias doesn't have method Error().
+	type alias assertError
 	return fmt.Sprintf("%+v", alias(s))
 }
 
@@ -287,7 +244,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		r.metrics().RequestDuration(time.Since(timeStart), true, false)
 
-		return resp.data, func(result interface{}) error {
+		return []interface{}{resp.data}, func(result interface{}) error {
 			if resp.data == nil {
 				return nil
 			}
@@ -414,47 +371,25 @@ func (r *Router) RouterMapCallRWImpl(
 	// proto for 'storage_map' method:
 	// https://github.com/tarantool/vshard/blob/8d299bfecff8bc656056658350ad48c829f9ad3f/vshard/storage/init.lua#L3158
 	for _, rsFuture := range rsFutures {
-		respData, err := rsFuture.future.Get()
+		resp := &VShardResponse{}
+
+		err := rsFuture.future.GetTyped(resp)
 		if err != nil {
 			return nil, fmt.Errorf("rs {%s} storage_map err: %v", rsFuture.uuid, err)
 		}
 
-		if len(respData) < 1 {
-			return nil, fmt.Errorf("protocol violation: invalid respData length: must be >= 1, current: %d", len(respData))
+		if resp.vshardError != nil {
+			return nil, fmt.Errorf("storage_map failed on %v: %+v", rsFuture.uuid, resp.vshardError)
 		}
 
-		if respData[0] == nil {
-			if len(respData) != 2 {
-				return nil, fmt.Errorf("protocol violation: invalid respData length when respData[0] == nil, must be = 2, current: %d", len(respData))
-			}
-
-			var assertError StorageCallAssertResponseError
-			err = mapstructure.Decode(respData[1], &assertError)
-			if err != nil {
-				// We could not decode respData[1] as assertError, so return respData[1] as is, add info why we could not decode.
-				return nil, fmt.Errorf("storage_map failed on %v: %+v (decoding to assertError failed %v)", rsFuture.uuid, respData[1], err)
-			}
-
-			return nil, fmt.Errorf("storage_map failed on %v: %+v", rsFuture.uuid, assertError)
-		}
-
-		var isVShardRespOk bool
-		err = rsFuture.future.GetTyped(&[]interface{}{&isVShardRespOk})
-		if err != nil {
-			return nil, fmt.Errorf("can't decode isVShardRespOk for storage_map response: %v", err)
-		}
-
-		if !isVShardRespOk {
+		if resp.assertError != nil {
 			return nil, fmt.Errorf("protocol violation: isVShardRespOk = false from storage_map: replicaset %v", rsFuture.uuid)
 		}
 
-		switch l := len(respData); l {
-		case 1:
+		if resp.data == nil {
 			idToResult[rsFuture.uuid] = nil
-		case 2:
-			idToResult[rsFuture.uuid] = respData[1]
-		default:
-			return nil, fmt.Errorf("protocol vioaltion: invalid respData when respData[0] == true, expected 1 or 2, got %d", l)
+		} else {
+			idToResult[rsFuture.uuid] = resp.data
 		}
 	}
 
