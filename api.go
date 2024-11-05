@@ -27,6 +27,65 @@ func (c VshardMode) String() string {
 	return string(c)
 }
 
+type VShardResponse struct {
+	assertError *assertError // not nil if there is assert error
+	vshardError *vshardError // not nil if there is vshard response
+	data        interface{}  // raw response data
+}
+
+func (s *VShardResponse) DecodeMsgpack(d *msgpack.Decoder) error {
+	// get array len for protocol violation check
+	arrayLen, err := d.DecodeArrayLen()
+	if err != nil {
+		return err
+	}
+
+	if arrayLen == 0 {
+		// vshard.storage.call(func) returns up to two values:
+		// - true/false/nil
+		// - func result, omitted if func does not return anything
+		return fmt.Errorf("invalid array length: %d; protocol violation", arrayLen)
+	}
+
+	assertBoolFace, err := d.DecodeInterface()
+	if err != nil {
+		return err
+	}
+
+	// this is storage error
+	if assertBoolFace == nil {
+		ve := &vshardError{}
+		err = d.Decode(ve)
+		if err != nil {
+			return fmt.Errorf("failed to decode storage assert error: %w", err)
+		}
+
+		s.vshardError = ve
+		return nil
+	}
+
+	assertBoolOk := assertBoolFace.(bool)
+	// that means we have no assert errors and response ok
+	if assertBoolOk {
+		if arrayLen == 1 {
+			return nil // data can be empty
+		}
+
+		s.data, err = d.DecodeInterface()
+
+		return err
+	} else {
+		ae := &assertError{}
+		err = d.Decode(ae)
+		if err != nil {
+			return fmt.Errorf("failed to decode storage assert error: %w", err)
+		}
+
+		s.assertError = ae
+		return nil
+	}
+}
+
 type StorageCallAssertResponseError struct {
 	Ok bool `msgpack:",omitempty"`
 	assertError
@@ -85,7 +144,7 @@ func (s StorageCallAssertResponseError) Error() string {
 	return fmt.Sprintf("%+v", alias(s))
 }
 
-type StorageCallVShardError struct {
+type vshardError struct {
 	BucketID       uint64  `msgpack:"bucket_id" mapstructure:"bucket_id"`
 	Reason         string  `msgpack:"reason"`
 	Code           int     `msgpack:"code"`
@@ -96,11 +155,11 @@ type StorageCallVShardError struct {
 	ReplicasetUUID *string `msgpack:"replicaset_uuid" mapstructure:"replicaset_uuid"` // mapstructure cant decode to source uuid type
 }
 
-func (s StorageCallVShardError) Error() string {
+func (s vshardError) Error() string {
 	// Just print struct as is, use hack with alias type to avoid recursion:
 	// %v attempts to call Error() method for s, which is recursion.
 	// This alias doesn't have method Error().
-	type alias StorageCallVShardError
+	type alias vshardError
 	return fmt.Sprintf("%+v", alias(s))
 }
 
@@ -149,7 +208,6 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 	})
 
 	var err error
-	var vshardError StorageCallVShardError
 
 	for {
 		if since := time.Since(timeStart); since > timeout {
@@ -182,34 +240,18 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		future := rs.conn.Do(req, opts.PoolMode)
 
-		var respData []interface{}
-		respData, err = future.Get()
+		resp := &VShardResponse{}
+		err = future.GetTyped(resp)
 		if err != nil {
 			return nil, nil, fmt.Errorf("got error on future.Get(): %w", err)
 		}
 
-		r.log().Debugf(ctx, "got call result response data %v", respData)
+		r.log().Debugf(ctx, "got call result response data %v", resp.data)
 
-		if len(respData) == 0 {
-			// vshard.storage.call(func) returns up to two values:
-			// - true/false/nil
-			// - func result, omitted if func does not return anything
-			return nil, nil, fmt.Errorf("protocol violation %s: got empty response", vshardStorageClientCall)
-		}
+		if resp.vshardError != nil {
+			vshardErr := resp.vshardError
 
-		if respData[0] == nil {
-			if len(respData) != 2 {
-				return nil, nil, fmt.Errorf("protocol violation %s: length is %d when respData[0] is nil", vshardStorageClientCall, len(respData))
-			}
-
-			err = mapstructure.Decode(respData[1], &vshardError)
-			if err != nil {
-				// Something unexpected happened: we couldn't decode respData[1] as a vshardError,
-				// so return reason why and respData[1], that is supposed to be a vshardError.
-				return nil, nil, fmt.Errorf("cant decode vhsard err by trarantool with err: %v (%v)", err, respData[1])
-			}
-
-			switch vshardError.Name {
+			switch vshardErr.Name {
 			case "WRONG_BUCKET", "BUCKET_IS_LOCKED":
 				r.BucketReset(bucketID)
 
@@ -219,41 +261,34 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 				// So we just retry here as a temporary solution.
 				r.metrics().RetryOnCall("bucket_migrate")
 
-				r.log().Debugf(ctx, "retrying fnc '%s' cause got vshard error: %v", fnc, &vshardError)
+				r.log().Debugf(ctx, "retrying fnc '%s' cause got vshard error: %v", fnc, vshardErr)
 
 				// this vshardError will be returned to a caller in case of timeout
-				err = &vshardError
+				err = vshardErr
 				continue
 			case "TRANSFER_IS_IN_PROGRESS":
 				// Since lua vshard router doesn't retry here, we don't retry too.
 				// There is a comment why lua vshard router doesn't retry:
 				// https://github.com/tarantool/vshard/blob/b6fdbe950a2e4557f05b83bd8b846b126ec3724e/vshard/router/init.lua#L697
 				r.BucketReset(bucketID)
-				return nil, nil, &vshardError
+				return nil, nil, vshardErr
 			case "NON_MASTER":
 				// We don't know how to handle this case yet, so just return it for now.
 				// Here is issue for it: https://github.com/KaymeKaydex/go-vshard-router/issues/88
-				return nil, nil, &vshardError
+				return nil, nil, vshardErr
 			default:
-				return nil, nil, &vshardError
+				return nil, nil, vshardErr
 			}
 		}
 
-		var assError StorageCallAssertResponseError
-
-		err = future.GetTyped(&assError)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%s: %s failed %v (decoding to assertError failed %v)", vshardStorageClientCall, fnc, respData[1], err)
-		}
-
-		if !assError.Ok {
-			return nil, nil, fmt.Errorf("%s: %s failed: %+v", vshardStorageClientCall, fnc, assError)
+		if resp.assertError != nil {
+			return nil, nil, fmt.Errorf("%s: %s failed: %+v", vshardStorageClientCall, fnc, resp.assertError)
 		}
 
 		r.metrics().RequestDuration(time.Since(timeStart), true, false)
 
-		return respData[1:], func(result interface{}) error {
-			if len(respData) < 2 {
+		return resp.data, func(result interface{}) error {
+			if resp.data == nil {
 				return nil
 			}
 
