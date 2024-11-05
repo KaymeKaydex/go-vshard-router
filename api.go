@@ -9,6 +9,7 @@ import (
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
 	"github.com/vmihailenco/msgpack/v5"
+	"github.com/vmihailenco/msgpack/v5/msgpcode"
 )
 
 // --------------------------------------------------------------------------------
@@ -27,9 +28,9 @@ func (c VshardMode) String() string {
 }
 
 type VShardResponse struct {
-	assertError *assertError // not nil if there is assert error
-	vshardError *vshardError // not nil if there is vshard response
-	data        interface{}  // raw response data
+	assertError *assertError  // not nil if there is assert error
+	vshardError *vshardError  // not nil if there is vshard response
+	data        []interface{} // raw response data
 }
 
 func (s *VShardResponse) DecodeMsgpack(d *msgpack.Decoder) error {
@@ -46,13 +47,20 @@ func (s *VShardResponse) DecodeMsgpack(d *msgpack.Decoder) error {
 		return fmt.Errorf("invalid array length: %d; protocol violation", arrayLen)
 	}
 
-	assertBoolFace, err := d.DecodeInterface()
+	// we need peek code to make our check faster than decode interface
+	// later we will check if code nil or bool
+	code, err := d.PeekCode()
 	if err != nil {
 		return err
 	}
 
 	// this is storage error
-	if assertBoolFace == nil {
+	if code == msgpcode.Nil {
+		err = d.DecodeNil()
+		if err != nil {
+			return err
+		}
+
 		ve := &vshardError{}
 		err = d.Decode(ve)
 		if err != nil {
@@ -63,14 +71,23 @@ func (s *VShardResponse) DecodeMsgpack(d *msgpack.Decoder) error {
 		return nil
 	}
 
-	assertBoolOk := assertBoolFace.(bool)
+	assertBoolOk, err := d.DecodeBool()
+	if err != nil {
+		return err
+	}
+
 	// that means we have no assert errors and response ok
 	if assertBoolOk {
 		if arrayLen == 1 {
 			return nil // data can be empty
 		}
 
-		s.data, err = d.DecodeInterface()
+		data := make([]interface{}, arrayLen-1)
+		for i := 1; i < arrayLen; i++ {
+			data[i-1], err = d.DecodeInterface()
+		}
+
+		s.data = data
 
 		return err
 	} else {
@@ -244,8 +261,8 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		r.metrics().RequestDuration(time.Since(timeStart), true, false)
 
-		return []interface{}{resp.data}, func(result interface{}) error {
-			if resp.data == nil {
+		return resp.data, func(result interface{}) error {
+			if len(resp.data) == 0 {
 				return nil
 			}
 

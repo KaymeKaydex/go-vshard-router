@@ -153,7 +153,7 @@ func TestRouter_RouterCallImpl_Decoding(t *testing.T) {
 		bucketID,
 		vshardrouter.CallOpts{VshardMode: vshardrouter.WriteMode, PoolMode: pool.RW, Timeout: 10 * time.Second},
 		"echo",
-		[]interface{}{&Product{Name: "test-go", BucketID: bucketID, ID: id.String(), Count: 3}})
+		[]interface{}{&Product{Name: "test-go", BucketID: bucketID, ID: id.String(), Count: 3}, "test"})
 
 	require.NoError(t, err)
 }
