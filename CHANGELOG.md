@@ -1,4 +1,4 @@
-## Unreleased
+## v1.2.0
 
 CHANGES:
 * We don't support LogProvider interface anymore, only LogfProvider should be used.
