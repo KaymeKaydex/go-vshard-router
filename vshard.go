@@ -95,6 +95,9 @@ type Config struct {
 	// DiscoveryTimeout is timeout between cron discovery job; by default there is no timeout.
 	DiscoveryTimeout time.Duration
 	DiscoveryMode    DiscoveryMode
+	// DiscoveryWorkStep is a pause between calling buckets_discovery on storage
+	// in buckets discovering logic. Default is 10ms.
+	DiscoveryWorkStep time.Duration
 
 	// BucketsSearchMode defines policy for BucketDiscovery method.
 	// Default value is BucketsSearchLegacy.
@@ -234,6 +237,7 @@ func (r *Router) RouteMapClean() {
 
 func prepareCfg(ctx context.Context, cfg Config) (Config, error) {
 	const discoveryTimeoutDefault = 1 * time.Minute
+	const discoveryWorkStepDefault = 10 * time.Millisecond
 
 	err := validateCfg(cfg)
 	if err != nil {
@@ -256,6 +260,10 @@ func prepareCfg(ctx context.Context, cfg Config) (Config, error) {
 
 	if cfg.Metrics == nil {
 		cfg.Metrics = emptyMetricsProvider
+	}
+
+	if cfg.DiscoveryWorkStep == 0 {
+		cfg.DiscoveryWorkStep = discoveryWorkStepDefault
 	}
 
 	return cfg, nil
