@@ -33,6 +33,7 @@ prepare-tnt:
 	@$(MAKE) -C ./tests/tnt prepare
 
 test: prepare-tnt
+	tt rocks install vshard 0.1.26
 	export START_PORT=33000
 	export NREPLICASETS=5
 	$(GO_CMD) test ./... -race -parallel=10 -timeout=$(TEST_TIMEOUT) -covermode=atomic -coverprofile=coverage.out.tmp -coverpkg="./..."

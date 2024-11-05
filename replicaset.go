@@ -16,7 +16,7 @@ type ReplicasetInfo struct {
 	Name             string
 	UUID             uuid.UUID
 	Weight           float64
-	PinnedCount      int
+	PinnedCount      uint64
 	IgnoreDisbalance bool
 }
 
@@ -32,7 +32,7 @@ type ReplicasetCallOpts struct {
 type Replicaset struct {
 	conn              pool.Pooler
 	info              ReplicasetInfo
-	EtalonBucketCount int
+	EtalonBucketCount uint64
 }
 
 func (rs *Replicaset) String() string {
@@ -206,7 +206,7 @@ func (rs *Replicaset) bucketsDiscovery(ctx context.Context, from uint64) (bucket
 // one new overloaded replicaset. Therefore, its time complexity is O(N^2),
 // where N is the number of replicasets.
 // based on  https://github.com/tarantool/vshard/blob/master/vshard/replicaset.lua#L1358
-func CalculateEtalonBalance(replicasets []Replicaset, bucketCount int) error {
+func CalculateEtalonBalance(replicasets []Replicaset, bucketCount uint64) error {
 	isBalanceFound := false
 	weightSum := 0.0
 	stepCount := 0
@@ -225,12 +225,12 @@ func CalculateEtalonBalance(replicasets []Replicaset, bucketCount int) error {
 		}
 
 		bucketPerWeight := float64(bucketCount) / weightSum
-		bucketsCalculated := 0
+		bucketsCalculated := uint64(0)
 
 		// Calculate etalon bucket count for each replicaset
 		for i := range replicasets {
 			if !replicasets[i].info.IgnoreDisbalance {
-				replicasets[i].EtalonBucketCount = int(math.Ceil(replicasets[i].info.Weight * bucketPerWeight))
+				replicasets[i].EtalonBucketCount = uint64(math.Ceil(replicasets[i].info.Weight * bucketPerWeight))
 				bucketsCalculated += replicasets[i].EtalonBucketCount
 			}
 		}
@@ -274,4 +274,33 @@ func CalculateEtalonBalance(replicasets []Replicaset, bucketCount int) error {
 	}
 
 	return nil
+}
+
+func (rs *Replicaset) BucketsCount(ctx context.Context) (uint64, error) {
+	const bucketCountFnc = "vshard.storage.buckets_count"
+
+	req := tarantool.NewCallRequest(bucketCountFnc)
+	req = req.Context(ctx)
+
+	fut := rs.conn.Do(req, pool.ANY)
+
+	bucketCount := new(uint64)
+
+	err := fut.GetTyped(&[]interface{}{bucketCount})
+
+	return *bucketCount, err
+}
+
+func (rs *Replicaset) BucketForceCreate(ctx context.Context, firstBucketID, count uint64) error {
+	const bucketCountFnc = "vshard.storage.bucket_force_create"
+
+	req := tarantool.NewCallRequest(bucketCountFnc)
+	req = req.Context(ctx)
+	req = req.Args(&[]interface{}{firstBucketID, count})
+
+	fut := rs.conn.Do(req, pool.RW)
+
+	_, err := fut.Get()
+
+	return err
 }
