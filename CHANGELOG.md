@@ -1,3 +1,9 @@
+## Unreleased
+
+FEATURES:
+
+* Add pause between requests in buckets discovering. Configured by config DiscoveryWorkStep, default is 10ms.
+
 ## v1.2.0
 
 CHANGES:
