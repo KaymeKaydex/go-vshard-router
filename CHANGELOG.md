@@ -6,6 +6,7 @@ BUG FIXES:
 CHANGES:
 * Add comment why and how we handle "NON_MASTER" vshard error.
 * Don't support 'type Error struct' anymore.
+* Handle vshard error the same way as lua vshard router (resolve issue #77).
 
 FEATURES:
 
