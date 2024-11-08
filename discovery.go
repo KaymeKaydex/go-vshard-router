@@ -100,7 +100,7 @@ func (r *Router) bucketSearchLegacy(ctx context.Context, bucketID uint64) (*Repl
 		rs, err := r.BucketSet(bucketID, rsFuture.rsID)
 		if err != nil {
 			r.log().Errorf(ctx, "bucketSearchLegacy: can't set rsID %v for bucketID %d: %v", rsFuture.rsID, bucketID, err)
-			return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+			return nil, newVShardErrorNoRouteToBucket(bucketID)
 		}
 
 		// TODO: should we release resources for unhandled futures?
@@ -116,7 +116,7 @@ func (r *Router) bucketSearchLegacy(ctx context.Context, bucketID uint64) (*Repl
 	   -- discovery).
 	*/
 
-	return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+	return nil, newVShardErrorNoRouteToBucket(bucketID)
 }
 
 // The approach in bucketSearchLegacy is very ineffective because
@@ -177,7 +177,7 @@ func (r *Router) bucketSearchBatched(ctx context.Context, bucketIDToFind uint64)
 	}
 
 	if rs == nil {
-		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+		return nil, newVShardErrorNoRouteToBucket(bucketIDToFind)
 	}
 
 	return rs, nil
