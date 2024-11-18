@@ -203,7 +203,7 @@ func (r *Router) BucketSet(bucketID uint64, rsID uuid.UUID) (*Replicaset, error)
 
 	rs := idToReplicasetRef[rsID]
 	if rs == nil {
-		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+		return nil, newVShardErrorNoRouteToBucket(bucketID)
 	}
 
 	view := r.getConsistentView()
