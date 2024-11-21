@@ -6,6 +6,8 @@ BUG FIXES:
 CHANGES:
 * Add comment why and how we handle "NON_MASTER" vshard error.
 * Don't support 'type Error struct' anymore.
+* Linter: don't capitalize error strings and capitalize log.
+* Fix misspellings.
 
 FEATURES:
 

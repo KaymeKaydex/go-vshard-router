@@ -45,7 +45,7 @@ func NewProvider(v *srcviper.Viper) *Provider {
 	for rsName, rs := range cfg.Topology.Clusters {
 		rsUUID, err := uuid.Parse(rs.ReplicasetUUID)
 		if err != nil {
-			log.Printf("cant parse replicaset uuid: %s", err)
+			log.Printf("Can't parse replicaset uuid: %s", err)
 
 			os.Exit(2)
 		}
@@ -59,7 +59,7 @@ func NewProvider(v *srcviper.Viper) *Provider {
 
 			instUUID, err := uuid.Parse(instInfo.Box.InstanceUUID)
 			if err != nil {
-				log.Printf("cant parse replicaset uuid: %s", err)
+				log.Printf("Can't parse replicaset uuid: %s", err)
 
 				panic(err)
 			}

@@ -113,7 +113,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		if since := time.Since(timeStart); since > timeout {
 			r.metrics().RequestDuration(since, false, false)
 
-			r.log().Debugf(ctx, "return result on timeout; since %s of timeout %s", since, timeout)
+			r.log().Debugf(ctx, "Return result on timeout; since %s of timeout %s", since, timeout)
 			if err == nil {
 				err = fmt.Errorf("cant get call cause call impl timeout")
 			}
@@ -136,7 +136,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			continue
 		}
 
-		r.log().Infof(ctx, "try call %s on replicaset %s for bucket %d", fnc, rs.info.Name, bucketID)
+		r.log().Infof(ctx, "Try call %s on replicaset %s for bucket %d", fnc, rs.info.Name, bucketID)
 
 		future := rs.conn.Do(req, opts.PoolMode)
 
@@ -146,7 +146,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			return nil, nil, fmt.Errorf("got error on future.Get(): %w", err)
 		}
 
-		r.log().Debugf(ctx, "got call result response data %v", respData)
+		r.log().Debugf(ctx, "Got call result response data %v", respData)
 
 		if len(respData) == 0 {
 			// vshard.storage.call(func) returns up to two values:
@@ -177,7 +177,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 				// So we just retry here as a temporary solution.
 				r.metrics().RetryOnCall("bucket_migrate")
 
-				r.log().Debugf(ctx, "retrying fnc '%s' cause got vshard error: %v", fnc, &vshardError)
+				r.log().Debugf(ctx, "Retrying fnc '%s' cause got vshard error: %v", fnc, &vshardError)
 
 				// this vshardError will be returned to a caller in case of timeout
 				err = &vshardError

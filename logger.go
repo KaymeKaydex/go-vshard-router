@@ -57,11 +57,11 @@ func (l tarantoolOptsLogger) Report(event tarantool.ConnLogKind, conn *tarantool
 
 		if headerOk {
 			l.loggerf.Errorf(l.ctx, "tarantool: connection %s got unexpected resultId (%d) in response"+
-				"(probably cancelled request)",
+				"(probably canceled request)",
 				conn.Addr(), header.RequestId)
 		} else {
 			l.loggerf.Errorf(l.ctx, "tarantool: connection %s got unexpected resultId in response"+
-				"(probably cancelled request) (unexpected v... format): %+v",
+				"(probably canceled request) (unexpected v... format): %+v",
 				conn.Addr(), v)
 		}
 	case tarantool.LogWatchEventReadFailed:
