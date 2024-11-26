@@ -13,6 +13,25 @@ linters-settings:
   goconst:
     min-len:         2
     min-occurrences: 2
+  revive:
+    rules:
+      - name: string-format
+        severity: error
+        disabled: false
+        arguments:
+          - - 'fmt.Errorf[0]'
+            - "/^[^A-Z].*$/"
+            - error messages must not start with capital letter
+          - - 'log.Printf[0]'
+            - "/^[^a-z].*$/"
+            - log messages must not start with lowercase letter
+  misspell:
+    # Correct spellings using locale preferences for US or UK.
+    # Default is to use a neutral variety of English.
+    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
+    locale: US
+    ignore-words:
+      - GitLab
 
 linters:
   disable-all: true
@@ -40,3 +59,4 @@ linters:
     - nilerr
     - nilnil
     - usestdlibvars
+    - misspell

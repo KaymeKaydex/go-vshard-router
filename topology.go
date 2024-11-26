@@ -45,7 +45,7 @@ func (r *Router) Topology() TopologyController {
 }
 
 func (r *Router) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceInfo) error {
-	r.log().Debugf(ctx, "trying to add instance %s to router topology in rs %s", info, rsID)
+	r.log().Debugf(ctx, "Trying to add instance %s to router topology in rs %s", info, rsID)
 
 	err := info.Validate()
 	if err != nil {
@@ -73,7 +73,7 @@ func (r *Router) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceI
 }
 
 func (r *Router) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error {
-	r.log().Debugf(ctx, "trying to remove instance %s from router topology in rs %s", instanceID, rsID)
+	r.log().Debugf(ctx, "Trying to remove instance %s from router topology in rs %s", instanceID, rsID)
 
 	idToReplicasetRef := r.getIDToReplicaset()
 
@@ -86,7 +86,7 @@ func (r *Router) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID)
 }
 
 func (r *Router) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, instances []InstanceInfo) error {
-	r.log().Debugf(ctx, "trying to add replicaset %s to router topology", rsInfo)
+	r.log().Debugf(ctx, "Trying to add replicaset %s to router topology", rsInfo)
 
 	idToReplicasetOld := r.getIDToReplicaset()
 
@@ -169,7 +169,7 @@ func (r *Router) AddReplicasets(ctx context.Context, replicasets map[ReplicasetI
 }
 
 func (r *Router) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
-	r.log().Debugf(ctx, "trying to remove replicaset %s from router topology", rsID)
+	r.log().Debugf(ctx, "Trying to remove replicaset %s from router topology", rsID)
 
 	idToReplicasetOld := r.getIDToReplicaset()
 

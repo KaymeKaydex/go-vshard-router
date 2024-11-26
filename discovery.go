@@ -26,7 +26,7 @@ const (
 )
 
 // BucketsSearchMode a type, that used to define policy for BucketDiscovery method.
-// See type Config for futher details.
+// See type Config for further details.
 type BucketsSearchMode int
 
 const (
@@ -226,7 +226,7 @@ func (r *Router) DiscoveryHandleBuckets(ctx context.Context, rs *Replicaset, buc
 func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	t := time.Now()
 
-	r.log().Infof(ctx, "start discovery all buckets")
+	r.log().Infof(ctx, "Start discovery all buckets")
 
 	errGr, ctx := errgroup.WithContext(ctx)
 
@@ -273,7 +273,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("errGr.Wait() err: %w", err)
 	}
-	r.log().Infof(ctx, "discovery done since: %s", time.Since(t))
+	r.log().Infof(ctx, "Discovery done since: %s", time.Since(t))
 
 	return nil
 }
@@ -294,7 +294,7 @@ func (r *Router) cronDiscovery(ctx context.Context) {
 
 		// Since the current for loop should not stop until ctx->Done() event fires,
 		// we should be able to continue execution even a panic occures.
-		// Therefore, we should wrap everyting into anonymous function that recovers after panic.
+		// Therefore, we should wrap everything into anonymous function that recovers after panic.
 		// (Similar to pcall in lua/tarantool)
 		func() {
 			defer func() {

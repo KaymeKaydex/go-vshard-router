@@ -173,7 +173,7 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 
 	err = cfg.TopologyProvider.Init(router.Topology())
 	if err != nil {
-		router.log().Errorf(ctx, "cant create new topology provider with err: %s", err)
+		router.log().Errorf(ctx, "Can't create new topology provider with err: %s", err)
 
 		return nil, fmt.Errorf("%w; cant init topology with err: %w", ErrTopologyProvider, err)
 	}

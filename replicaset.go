@@ -269,7 +269,7 @@ func CalculateEtalonBalance(replicasets []Replicaset, bucketCount uint64) error 
 
 		// Safety check to prevent infinite loops
 		if stepCount > replicasetCount {
-			return fmt.Errorf("PANIC: the rebalancer is broken")
+			return fmt.Errorf("[PANIC]: the rebalancer is broken")
 		}
 	}
 
