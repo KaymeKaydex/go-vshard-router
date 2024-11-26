@@ -8,6 +8,7 @@ CHANGES:
 * Don't support 'type Error struct' anymore.
 * Linter: don't capitalize error strings and capitalize log.
 * Fix misspellings.
+* Handle vshard error the same way as lua vshard router (resolve issue #77).
 
 FEATURES:
 
