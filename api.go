@@ -120,12 +120,12 @@ func (s assertError) Error() string {
 }
 
 type vshardError struct {
-	BucketID       uint64  `msgpack:"bucket_id" mapstructure:"bucket_id"`
-	Reason         string  `msgpack:"reason"`
-	Code           int     `msgpack:"code"`
-	Type           string  `msgpack:"type"`
-	Message        string  `msgpack:"message"`
-	Name           string  `msgpack:"name"`
+	BucketID uint64 `msgpack:"bucket_id" mapstructure:"bucket_id"`
+	Reason   string `msgpack:"reason"`
+	Code     int    `msgpack:"code"`
+	Type     string `msgpack:"type"`
+	Message  string `msgpack:"message"`
+	Name     string `msgpack:"name"`
 	// These 3 fields below are send as string by vshard storage, so we decode them into string, not uuid.UUID type
 	// Example: 00000000-0000-0002-0002-000000000000
 	MasterUUID     string `msgpack:"master" mapstructure:"master"`
@@ -224,14 +224,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			return nil, nil, fmt.Errorf("got error on future.Get(): %w", err)
 		}
 
-		r.log().Debugf(ctx, "Got call result response data %v", respData)
-
-		if len(respData) == 0 {
-			// vshard.storage.call(func) returns up to two values:
-			// - true/false/nil
-			// - func result, omitted if func does not return anything
-			return nil, nil, fmt.Errorf("protocol violation %s: got empty response", vshardStorageClientCall)
-		}
+		r.log().Debugf(ctx, "Got call result response data %v", resp.data)
 
 		if resp.vshardError != nil {
 			vshardErr := resp.vshardError
@@ -246,7 +239,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 				// So we just retry here as a temporary solution.
 				r.metrics().RetryOnCall("bucket_migrate")
 
-				r.log().Debugf(ctx, "Retrying fnc '%s' cause got vshard error: %v", fnc, &vshardError)
+				r.log().Debugf(ctx, "Retrying fnc '%s' cause got vshard error: %v", fnc, resp.vshardError)
 
 				// this vshardError will be returned to a caller in case of timeout
 				err = vshardErr
@@ -256,10 +249,6 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 				// There is a comment why lua vshard router doesn't retry:
 				// https://github.com/tarantool/vshard/blob/b6fdbe950a2e4557f05b83bd8b846b126ec3724e/vshard/router/init.lua#L697
 				r.BucketReset(bucketID)
-				return nil, nil, vshardErr
-			case "NON_MASTER":
-				// We don't know how to handle this case yet, so just return it for now.
-				// Here is issue for it: https://github.com/KaymeKaydex/go-vshard-router/issues/88
 				return nil, nil, vshardErr
 			case VShardErrNameNonMaster:
 				// vshard.storage has returned NON_MASTER error, lua vshard router updates info about master in this case:
@@ -419,7 +408,7 @@ func (r *Router) RouterMapCallRWImpl(
 				return nil, fmt.Errorf("protocol violation: invalid respData length when respData[0] == nil, must be = 2, current: %d", len(respData))
 			}
 
-			var assertError storageCallAssertError
+			var assertError assertError
 			err = mapstructure.Decode(respData[1], &assertError)
 			if err != nil {
 				// We could not decode respData[1] as assertError, so return respData[1] as is, add info why we could not decode.
