@@ -107,7 +107,7 @@ func (bse bucketStatError) Error() string {
 }
 
 func newVShardErrorNoRouteToBucket(bucketID uint64) error {
-	return &vshardError{
+	return &StorageCallVShardError{
 		Name:     VShardErrNameNoRouteToBucket,
 		Code:     VShardErrCodeNoRouteToBucket,
 		Type:     "ShardingError",
