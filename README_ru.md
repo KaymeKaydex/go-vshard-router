@@ -191,12 +191,12 @@ func main() {
 ## Бенчмарки
 ### Go Bench
 
-| Бенчмарк                               | Запусков | Время (ns/op) | Память (B/op) | Аллокации (allocs/op) |
-|----------------------------------------|----------|----------------|----------------|------------------------|
-| BenchmarkCallSimpleInsert_GO-8        | 9844     | 114596         | 1894           | 41                     |
-| BenchmarkCallSimpleInsert_Lua-8       | 7587     | 156181         | 1101           | 19                     |
-| BenchmarkCallSimpleSelect_GO-8        | 16350    | 75770          | 2827           | 60                     |
-| BenchmarkCallSimpleSelect_Lua-8       | 10060    | 116768         | 1610           | 28                     |
+| Бенчмарк                         | Число запусков | Время (ns/op) | Память (B/op) | Аллокации (allocs/op) |
+|----------------------------------|----------------|---------------|---------------|-----------------------|
+| BenchmarkCallSimpleInsert_GO-12  | 14216          | 81118         | 1419          | 29                    |
+| BenchmarkCallSimpleSelect_GO-12  | 18832          | 65190         | 1879          | 38                    |
+| BenchmarkCallSimpleInsert_Lua-12 | 9580           | 123307        | 1131          | 19                    |
+| BenchmarkCallSimpleSelect_Lua-12 | 9963           | 104781        | 1617          | 28                    |
 
 
 ### [K6](https://github.com/grafana/k6)
