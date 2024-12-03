@@ -1,3 +1,23 @@
+## Unreleased
+
+BUG FIXES:
+* Fix decoding fields for StorageCallVShardError (MasterUUID, ReplicasetUUID).
+
+CHANGES:
+* Add comment why and how we handle "NON_MASTER" vshard error.
+* Don't support 'type Error struct' anymore.
+* Linter: don't capitalize error strings and capitalize log.
+* Fix misspellings.
+
+FEATURES:
+
+* Add pause between requests in buckets discovering. Configured by config DiscoveryWorkStep, default is 10ms.
+* Add ReplicaUUID to the StorageCallVShardError struct.
+
+REFACTOR:
+
+* Use constants for vshard error names and codes.
+
 ## v1.2.0
 
 CHANGES:

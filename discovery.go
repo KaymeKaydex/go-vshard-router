@@ -26,7 +26,7 @@ const (
 )
 
 // BucketsSearchMode a type, that used to define policy for BucketDiscovery method.
-// See type Config for futher details.
+// See type Config for further details.
 type BucketsSearchMode int
 
 const (
@@ -100,7 +100,7 @@ func (r *Router) bucketSearchLegacy(ctx context.Context, bucketID uint64) (*Repl
 		rs, err := r.BucketSet(bucketID, rsFuture.rsID)
 		if err != nil {
 			r.log().Errorf(ctx, "bucketSearchLegacy: can't set rsID %v for bucketID %d: %v", rsFuture.rsID, bucketID, err)
-			return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+			return nil, newVShardErrorNoRouteToBucket(bucketID)
 		}
 
 		// TODO: should we release resources for unhandled futures?
@@ -116,7 +116,7 @@ func (r *Router) bucketSearchLegacy(ctx context.Context, bucketID uint64) (*Repl
 	   -- discovery).
 	*/
 
-	return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+	return nil, newVShardErrorNoRouteToBucket(bucketID)
 }
 
 // The approach in bucketSearchLegacy is very ineffective because
@@ -177,7 +177,7 @@ func (r *Router) bucketSearchBatched(ctx context.Context, bucketIDToFind uint64)
 	}
 
 	if rs == nil {
-		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+		return nil, newVShardErrorNoRouteToBucket(bucketIDToFind)
 	}
 
 	return rs, nil
@@ -226,7 +226,7 @@ func (r *Router) DiscoveryHandleBuckets(ctx context.Context, rs *Replicaset, buc
 func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	t := time.Now()
 
-	r.log().Infof(ctx, "start discovery all buckets")
+	r.log().Infof(ctx, "Start discovery all buckets")
 
 	errGr, ctx := errgroup.WithContext(ctx)
 
@@ -261,6 +261,10 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 				}
 
 				bucketsDiscoveryPaginationFrom = resp.NextFrom
+
+				// Don't spam many requests at once. Give storages time to handle them and other requests.
+				// https://github.com/tarantool/vshard/blob/b6fdbe950a2e4557f05b83bd8b846b126ec3724e/vshard/router/init.lua#L308
+				time.Sleep(r.cfg.DiscoveryWorkStep)
 			}
 		})
 	}
@@ -269,7 +273,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("errGr.Wait() err: %w", err)
 	}
-	r.log().Infof(ctx, "discovery done since: %s", time.Since(t))
+	r.log().Infof(ctx, "Discovery done since: %s", time.Since(t))
 
 	return nil
 }
@@ -290,7 +294,7 @@ func (r *Router) cronDiscovery(ctx context.Context) {
 
 		// Since the current for loop should not stop until ctx->Done() event fires,
 		// we should be able to continue execution even a panic occures.
-		// Therefore, we should wrap everyting into anonymous function that recovers after panic.
+		// Therefore, we should wrap everything into anonymous function that recovers after panic.
 		// (Similar to pcall in lua/tarantool)
 		func() {
 			defer func() {

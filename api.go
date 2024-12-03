@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
 	"github.com/vmihailenco/msgpack/v5"
@@ -124,8 +126,11 @@ type vshardError struct {
 	Type           string  `msgpack:"type"`
 	Message        string  `msgpack:"message"`
 	Name           string  `msgpack:"name"`
-	MasterUUID     *string `msgpack:"master_uuid" mapstructure:"master_uuid"`         // mapstructure cant decode to source uuid type
-	ReplicasetUUID *string `msgpack:"replicaset_uuid" mapstructure:"replicaset_uuid"` // mapstructure cant decode to source uuid type
+	// These 3 fields below are send as string by vshard storage, so we decode them into string, not uuid.UUID type
+	// Example: 00000000-0000-0002-0002-000000000000
+	MasterUUID     string `msgpack:"master" mapstructure:"master"`
+	ReplicasetUUID string `msgpack:"replicaset" mapstructure:"replicaset"`
+	ReplicaUUID    string `msgpack:"replica" mapstructure:"replica"`
 }
 
 func (s vshardError) Error() string {
@@ -186,7 +191,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 		if since := time.Since(timeStart); since > timeout {
 			r.metrics().RequestDuration(since, false, false)
 
-			r.log().Debugf(ctx, "return result on timeout; since %s of timeout %s", since, timeout)
+			r.log().Debugf(ctx, "Return result on timeout; since %s of timeout %s", since, timeout)
 			if err == nil {
 				err = fmt.Errorf("cant get call cause call impl timeout")
 			}
@@ -209,7 +214,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			continue
 		}
 
-		r.log().Infof(ctx, "try call %s on replicaset %s for bucket %d", fnc, rs.info.Name, bucketID)
+		r.log().Infof(ctx, "Try call %s on replicaset %s for bucket %d", fnc, rs.info.Name, bucketID)
 
 		future := rs.conn.Do(req, opts.PoolMode)
 
@@ -219,7 +224,14 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			return nil, nil, fmt.Errorf("got error on future.Get(): %w", err)
 		}
 
-		r.log().Debugf(ctx, "got call result response data %v", resp.data)
+		r.log().Debugf(ctx, "Got call result response data %v", respData)
+
+		if len(respData) == 0 {
+			// vshard.storage.call(func) returns up to two values:
+			// - true/false/nil
+			// - func result, omitted if func does not return anything
+			return nil, nil, fmt.Errorf("protocol violation %s: got empty response", vshardStorageClientCall)
+		}
 
 		if resp.vshardError != nil {
 			vshardErr := resp.vshardError
@@ -234,12 +246,12 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 				// So we just retry here as a temporary solution.
 				r.metrics().RetryOnCall("bucket_migrate")
 
-				r.log().Debugf(ctx, "retrying fnc '%s' cause got vshard error: %v", fnc, vshardErr)
+				r.log().Debugf(ctx, "Retrying fnc '%s' cause got vshard error: %v", fnc, &vshardError)
 
 				// this vshardError will be returned to a caller in case of timeout
 				err = vshardErr
 				continue
-			case "TRANSFER_IS_IN_PROGRESS":
+			case VShardErrNameTransferIsInProgress:
 				// Since lua vshard router doesn't retry here, we don't retry too.
 				// There is a comment why lua vshard router doesn't retry:
 				// https://github.com/tarantool/vshard/blob/b6fdbe950a2e4557f05b83bd8b846b126ec3724e/vshard/router/init.lua#L697
@@ -248,6 +260,12 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 			case "NON_MASTER":
 				// We don't know how to handle this case yet, so just return it for now.
 				// Here is issue for it: https://github.com/KaymeKaydex/go-vshard-router/issues/88
+				return nil, nil, vshardErr
+			case VShardErrNameNonMaster:
+				// vshard.storage has returned NON_MASTER error, lua vshard router updates info about master in this case:
+				// See: https://github.com/tarantool/vshard/blob/b6fdbe950a2e4557f05b83bd8b846b126ec3724e/vshard/router/init.lua#L704.
+				// Since we use go-tarantool library, and go-tarantool library doesn't provide API to update info about current master,
+				// we just return this error as is.
 				return nil, nil, vshardErr
 			default:
 				return nil, nil, vshardErr
@@ -387,25 +405,47 @@ func (r *Router) RouterMapCallRWImpl(
 	// proto for 'storage_map' method:
 	// https://github.com/tarantool/vshard/blob/8d299bfecff8bc656056658350ad48c829f9ad3f/vshard/storage/init.lua#L3158
 	for _, rsFuture := range rsFutures {
-		resp := &VShardResponse{}
-
-		err := rsFuture.future.GetTyped(resp)
+		respData, err := rsFuture.future.Get()
 		if err != nil {
 			return nil, fmt.Errorf("rs {%s} storage_map err: %v", rsFuture.uuid, err)
 		}
 
-		if resp.vshardError != nil {
-			return nil, fmt.Errorf("storage_map failed on %v: %+v", rsFuture.uuid, resp.vshardError)
+		if len(respData) < 1 {
+			return nil, fmt.Errorf("protocol violation: invalid respData length: must be >= 1, current: %d", len(respData))
 		}
 
-		if resp.assertError != nil {
+		if respData[0] == nil {
+			if len(respData) != 2 {
+				return nil, fmt.Errorf("protocol violation: invalid respData length when respData[0] == nil, must be = 2, current: %d", len(respData))
+			}
+
+			var assertError storageCallAssertError
+			err = mapstructure.Decode(respData[1], &assertError)
+			if err != nil {
+				// We could not decode respData[1] as assertError, so return respData[1] as is, add info why we could not decode.
+				return nil, fmt.Errorf("storage_map failed on %v: %+v (decoding to assertError failed %v)", rsFuture.uuid, respData[1], err)
+			}
+
+			return nil, fmt.Errorf("storage_map failed on %v: %+v", rsFuture.uuid, assertError)
+		}
+
+		var isVShardRespOk bool
+		err = rsFuture.future.GetTyped(&[]interface{}{&isVShardRespOk})
+		if err != nil {
+			return nil, fmt.Errorf("can't decode isVShardRespOk for storage_map response: %v", err)
+		}
+
+		if !isVShardRespOk {
 			return nil, fmt.Errorf("protocol violation: isVShardRespOk = false from storage_map: replicaset %v", rsFuture.uuid)
 		}
 
-		if resp.data == nil {
+		switch l := len(respData); l {
+		case 1:
 			idToResult[rsFuture.uuid] = nil
-		} else {
-			idToResult[rsFuture.uuid] = resp.data
+		case 2:
+			idToResult[rsFuture.uuid] = respData[1]
+		default:
+			return nil, fmt.Errorf("protocol vioaltion: invalid respData when respData[0] == true, expected 1 or 2, got %d", l)
 		}
 	}
 

@@ -95,6 +95,9 @@ type Config struct {
 	// DiscoveryTimeout is timeout between cron discovery job; by default there is no timeout.
 	DiscoveryTimeout time.Duration
 	DiscoveryMode    DiscoveryMode
+	// DiscoveryWorkStep is a pause between calling buckets_discovery on storage
+	// in buckets discovering logic. Default is 10ms.
+	DiscoveryWorkStep time.Duration
 
 	// BucketsSearchMode defines policy for BucketDiscovery method.
 	// Default value is BucketsSearchLegacy.
@@ -170,7 +173,7 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 
 	err = cfg.TopologyProvider.Init(router.Topology())
 	if err != nil {
-		router.log().Errorf(ctx, "cant create new topology provider with err: %s", err)
+		router.log().Errorf(ctx, "Can't create new topology provider with err: %s", err)
 
 		return nil, fmt.Errorf("%w; cant init topology with err: %w", ErrTopologyProvider, err)
 	}
@@ -200,7 +203,7 @@ func (r *Router) BucketSet(bucketID uint64, rsID uuid.UUID) (*Replicaset, error)
 
 	rs := idToReplicasetRef[rsID]
 	if rs == nil {
-		return nil, Errors[9] // NO_ROUTE_TO_BUCKET
+		return nil, newVShardErrorNoRouteToBucket(bucketID)
 	}
 
 	view := r.getConsistentView()
@@ -234,6 +237,7 @@ func (r *Router) RouteMapClean() {
 
 func prepareCfg(ctx context.Context, cfg Config) (Config, error) {
 	const discoveryTimeoutDefault = 1 * time.Minute
+	const discoveryWorkStepDefault = 10 * time.Millisecond
 
 	err := validateCfg(cfg)
 	if err != nil {
@@ -256,6 +260,10 @@ func prepareCfg(ctx context.Context, cfg Config) (Config, error) {
 
 	if cfg.Metrics == nil {
 		cfg.Metrics = emptyMetricsProvider
+	}
+
+	if cfg.DiscoveryWorkStep == 0 {
+		cfg.DiscoveryWorkStep = discoveryWorkStepDefault
 	}
 
 	return cfg, nil
