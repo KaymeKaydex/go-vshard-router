@@ -194,8 +194,8 @@ Service with go-vshard-router on top of the tarantool example from the original 
 | Benchmark                             | Runs   | Time (ns/op) | Memory (B/op) | Allocations (allocs/op) |
 |---------------------------------------|--------|---------------|----------------|-------------------------|
 | BenchmarkCallSimpleInsert_GO-12       | 14216  | 81118         | 1419           | 29                      |
-| BenchmarkCallSimpleSelect_GO-12       | 18832  | 65190         | 1879           | 38                      |
 | BenchmarkCallSimpleInsert_Lua-12      | 9580   | 123307        | 1131           | 19                      |
+| BenchmarkCallSimpleSelect_GO-12       | 18832  | 65190         | 1879           | 38                      |
 | BenchmarkCallSimpleSelect_Lua-12      | 9963   | 104781        | 1617           | 28                      |
 
 
