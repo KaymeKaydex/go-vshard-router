@@ -30,48 +30,37 @@ func (c VshardMode) String() string {
 }
 
 type vshardStorageCallResponseProto struct {
-	assertError      *assertError            // not nil if there is assert error
-	vshardError      *StorageCallVShardError // not nil if there is vshard response
-	respArrayLen     int
-	data             []interface{}      // raw response data
-	dataFirstElement msgpack.RawMessage // the first element of data array as a raw message (if applicable)
-}
-
-func (r *vshardStorageCallResponseProto) decodeDataFirstElementInto(v interface{}) error {
-	if r.respArrayLen < 2 {
-		return nil
-	}
-
-	return msgpack.Unmarshal(r.dataFirstElement, v)
-}
-
-func (r *vshardStorageCallResponseProto) decodeDataFirstElement() (interface{}, error) {
-	var resp interface{}
-	err := r.decodeDataFirstElementInto(&resp)
-	return resp, err
+	assertError *assertError            // not nil if there is assert error
+	vshardError *StorageCallVShardError // not nil if there is vshard response
+	data        []interface{}           // raw response data
 }
 
 func (r *vshardStorageCallResponseProto) DecodeMsgpack(d *msgpack.Decoder) error {
 	/* vshard.storage.call(func) response has the next 4 possbile formats:
+	See: https://github.com/tarantool/vshard/blob/dfa2cc8a2aff221d5f421298851a9a229b2e0434/vshard/storage/init.lua#L3130
 	1. vshard error has occurred:
 		array[nil, vshard_error]
 	2. User method has finished with some error:
 		array[false, assert error]
-	3. User mehod has finished successfully, but has not returned anything
-		array[true]
-	4. User mehod has finished successfully and has returned something
-		array[true, data]
+	3. User mehod has finished successfully
+		a) but has not returned anything
+			array[true]
+		b) has returned 1 element
+			array[true, elem1]
+		c) has returned 2 element
+			array[true, elem1, elem2]
+		d) has returned 3 element
+			array[true, elem1, elem2, elem3]
 	*/
 
 	// Ensure it is an array and get array len for protocol violation check
-	var err error
-	r.respArrayLen, err = d.DecodeArrayLen()
+	respArrayLen, err := d.DecodeArrayLen()
 	if err != nil {
 		return err
 	}
 
-	if r.respArrayLen == 0 {
-		return fmt.Errorf("protocol violation: invalid array length: %d", r.respArrayLen)
+	if respArrayLen == 0 {
+		return fmt.Errorf("protocol violation: invalid array length: %d", respArrayLen)
 	}
 
 	// we need peek code to make our check faster than decode interface
@@ -88,8 +77,8 @@ func (r *vshardStorageCallResponseProto) DecodeMsgpack(d *msgpack.Decoder) error
 			return err
 		}
 
-		if r.respArrayLen != 2 {
-			return fmt.Errorf("protocol violation: length is %d on vshard error case", r.respArrayLen)
+		if respArrayLen != 2 {
+			return fmt.Errorf("protocol violation: length is %d on vshard error case", respArrayLen)
 		}
 
 		var vshardError StorageCallVShardError
@@ -111,8 +100,8 @@ func (r *vshardStorageCallResponseProto) DecodeMsgpack(d *msgpack.Decoder) error
 
 	if !isVShardRespOk {
 		// that means we have an assert errors and response is not ok
-		if r.respArrayLen != 2 {
-			return fmt.Errorf("protocol violation: length is %d on assert error case", r.respArrayLen)
+		if respArrayLen != 2 {
+			return fmt.Errorf("protocol violation: length is %d on assert error case", respArrayLen)
 		}
 
 		var assertError assertError
@@ -127,30 +116,9 @@ func (r *vshardStorageCallResponseProto) DecodeMsgpack(d *msgpack.Decoder) error
 	}
 
 	// isVShardRespOk is true
+	r.data = make([]interface{}, 0, respArrayLen-1)
 
-	r.data = make([]interface{}, 0, r.respArrayLen-1)
-
-	if r.respArrayLen == 1 {
-		return nil
-	}
-
-	// The first element is a special case, because we have to return it in two places:
-	// - as the first element of r.data
-	// - decode it into user's type
-
-	r.dataFirstElement, err = d.DecodeRaw()
-	if err != nil {
-		return fmt.Errorf("failed to DecodeRaw element #2 of response array")
-	}
-
-	elem, err := r.decodeDataFirstElement()
-	if err != nil {
-		return fmt.Errorf("failed to decode into interface element #2 of response array")
-	}
-	r.data = append(r.data, elem)
-
-	// Handle other elements
-	for i := 2; i < r.respArrayLen; i++ {
+	for i := 1; i < respArrayLen; i++ {
 		elem, err := d.DecodeInterface()
 		if err != nil {
 			return fmt.Errorf("failed to decode into interface element #%d of response array", i+1)
@@ -325,7 +293,15 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 		r.metrics().RequestDuration(time.Since(timeStart), true, false)
 
-		return storageCallResponse.data, storageCallResponse.decodeDataFirstElementInto, nil
+		return storageCallResponse.data, func(result interface{}) error {
+			if len(storageCallResponse.data) == 0 {
+				return nil
+			}
+
+			var stub bool
+
+			return future.GetTyped(&[]interface{}{&stub, result})
+		}, nil
 	}
 }
 
