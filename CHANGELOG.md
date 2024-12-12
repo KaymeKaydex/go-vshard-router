@@ -9,6 +9,9 @@ CHANGES:
 * Linter: don't capitalize error strings and capitalize log.
 * Fix misspellings.
 * Handle vshard error the same way as lua vshard router (resolve issue #77).
+* Decode 'vshard.storage.call' response manually into struct vshardStorageCallResponseProto using DecodeMsgpack interface to reduce allocations (partially #61, #100).
+* Remove `mapstructure` tag from StorageCallVShardError.
+* Update benchmarks in README files.
 
 FEATURES:
 
@@ -18,6 +21,9 @@ FEATURES:
 REFACTOR:
 
 * Use constants for vshard error names and codes.
+
+TESTS:
+* Rename bootstrap_test.go -> tarantool_test.go and new test in this file.
 
 ## v1.2.0
 

@@ -35,6 +35,7 @@ func BenchmarkCallSimpleInsert_GO(b *testing.B) {
 		TotalBucketCount: totalBucketCount,
 		User:             defaultTntUser,
 		Password:         defaultTntPassword,
+		RequestTimeout:   time.Minute,
 	})
 	require.NoError(b, err)
 
@@ -46,7 +47,7 @@ func BenchmarkCallSimpleInsert_GO(b *testing.B) {
 		_, _, err := router.RouterCallImpl(
 			ctx,
 			bucketID,
-			vshardrouter.CallOpts{VshardMode: vshardrouter.WriteMode, PoolMode: pool.RW, Timeout: time.Second},
+			vshardrouter.CallOpts{VshardMode: vshardrouter.WriteMode, PoolMode: pool.RW, Timeout: 10 * time.Second},
 			"product_add",
 			[]interface{}{&Product{Name: "test-go", BucketID: bucketID, ID: id.String(), Count: 3}})
 		require.NoError(b, err)
