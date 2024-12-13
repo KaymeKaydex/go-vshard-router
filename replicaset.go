@@ -7,9 +7,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
+	"github.com/vmihailenco/msgpack/v5"
+	"github.com/vmihailenco/msgpack/v5/msgpcode"
 )
 
 type ReplicasetInfo struct {
@@ -51,41 +52,71 @@ func (rs *Replicaset) bucketStatAsync(ctx context.Context, bucketID uint64) *tar
 	return rs.CallAsync(ctx, ReplicasetCallOpts{PoolMode: pool.RO}, bucketStatFnc, []interface{}{bucketID})
 }
 
-func bucketStatWait(future *tarantool.Future) (BucketStatInfo, error) {
-	var bsInfo BucketStatInfo
+type vshardStorageBucketStatResponseProto struct {
+	ok   bool
+	info BucketStatInfo
+	err  StorageCallVShardError
+}
 
-	respData, err := future.Get()
+func (r *vshardStorageBucketStatResponseProto) DecodeMsgpack(d *msgpack.Decoder) error {
+	// bucket_stat returns pair: stat, err
+	// https://github.com/tarantool/vshard/blob/e1c806e1d3d2ce8a4e6b4d498c09051bf34ab92a/vshard/storage/init.lua#L1413
+
+	respArrayLen, err := d.DecodeArrayLen()
 	if err != nil {
-		return bsInfo, err
+		return err
 	}
 
-	if len(respData) == 0 {
-		return bsInfo, fmt.Errorf("protocol violation bucketStatWait: empty response")
+	if respArrayLen == 0 {
+		return fmt.Errorf("protocol violation bucketStatWait: empty response")
 	}
 
-	if respData[0] == nil {
-		if len(respData) != 2 {
-			return bsInfo, fmt.Errorf("protocol violation bucketStatWait: invalid response length %d when respData[0] is nil", len(respData))
-		}
+	code, err := d.PeekCode()
+	if err != nil {
+		return err
+	}
 
-		var bsError bucketStatError
-		err = mapstructure.Decode(respData[1], &bsError)
+	if code == msgpcode.Nil {
+		err = d.DecodeNil()
 		if err != nil {
-			// We could not decode respData[1] as bsError, so return respData[1] as is, add info why we could not decode.
-			return bsInfo, fmt.Errorf("bucketStatWait error: %v (can't decode into bsError: %v)", respData[1], err)
+			return err
 		}
 
-		return bsInfo, bsError
+		if respArrayLen != 2 {
+			return fmt.Errorf("protocol violation bucketStatWait: length is %d on vshard error case", respArrayLen)
+		}
+
+		err = d.Decode(&r.err)
+		if err != nil {
+			return fmt.Errorf("failed to decode storage vshard error: %w", err)
+		}
+
+		return nil
 	}
 
-	// A problem with key-code 1
-	// todo: fix after https://github.com/tarantool/go-tarantool/issues/368
-	err = mapstructure.Decode(respData[0], &bsInfo)
+	err = d.Decode(&r.info)
 	if err != nil {
-		return bsInfo, fmt.Errorf("can't decode bsInfo: %w", err)
+		return fmt.Errorf("failed to decode bucket stat info: %w", err)
 	}
 
-	return bsInfo, nil
+	r.ok = true
+
+	return nil
+}
+
+func bucketStatWait(future *tarantool.Future) (BucketStatInfo, error) {
+	var bucketStatResponse vshardStorageBucketStatResponseProto
+
+	err := future.GetTyped(&bucketStatResponse)
+	if err != nil {
+		return BucketStatInfo{}, err
+	}
+
+	if !bucketStatResponse.ok {
+		return BucketStatInfo{}, bucketStatResponse.err
+	}
+
+	return bucketStatResponse.info, nil
 }
 
 // ReplicaCall perform function on remote storage

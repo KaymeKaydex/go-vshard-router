@@ -92,20 +92,6 @@ const (
 	VShardErrNameInstanceNameMismatch   = "INSTANCE_NAME_MISMATCH"
 )
 
-type bucketStatError struct {
-	BucketID uint64 `msgpack:"bucket_id"`
-	Reason   string `msgpack:"reason"`
-	Code     int    `msgpack:"code"`
-	Type     string `msgpack:"type"`
-	Message  string `msgpack:"message"`
-	Name     string `msgpack:"name"`
-}
-
-func (bse bucketStatError) Error() string {
-	type alias bucketStatError
-	return fmt.Sprintf("%+v", alias(bse))
-}
-
 func newVShardErrorNoRouteToBucket(bucketID uint64) error {
 	return &StorageCallVShardError{
 		Name:     VShardErrNameNoRouteToBucket,
