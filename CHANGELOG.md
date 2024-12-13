@@ -21,6 +21,8 @@ FEATURES:
 REFACTOR:
 
 * Use constants for vshard error names and codes.
+* Reduce SLOC by using CallAsync method.
+* BucketForceCreate optimization: don't decode tnt response.
 
 TESTS:
 * Rename bootstrap_test.go -> tarantool_test.go and new test in this file.
