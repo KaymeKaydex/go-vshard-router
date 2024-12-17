@@ -52,7 +52,7 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 		return nil, fmt.Errorf("bucket id is out of range: %d (total %d)", bucketID, r.cfg.TotalBucketCount)
 	}
 
-	view := r.getConsistentView()
+	_, view := r.concurrentData.getRefs()
 
 	rs := view.routeMap[bucketID].Load()
 	if rs != nil {
@@ -70,7 +70,7 @@ func (r *Router) BucketDiscovery(ctx context.Context, bucketID uint64) (*Replica
 }
 
 func (r *Router) bucketSearchLegacy(ctx context.Context, bucketID uint64) (*Replicaset, error) {
-	idToReplicasetRef := r.getIDToReplicaset()
+	idToReplicasetRef, _ := r.concurrentData.getRefs()
 
 	type rsFuture struct {
 		rsID   uuid.UUID
@@ -127,8 +127,7 @@ func (r *Router) bucketSearchLegacy(ctx context.Context, bucketID uint64) (*Repl
 // https://github.com/tarantool/vshard/blob/dfa2cc8a2aff221d5f421298851a9a229b2e0434/vshard/storage/init.lua#L1700
 // https://github.com/tarantool/vshard/blob/dfa2cc8a2aff221d5f421298851a9a229b2e0434/vshard/consts.lua#L37
 func (r *Router) bucketSearchBatched(ctx context.Context, bucketIDToFind uint64) (*Replicaset, error) {
-	idToReplicasetRef := r.getIDToReplicaset()
-	view := r.getConsistentView()
+	idToReplicasetRef, view := r.concurrentData.getRefs()
 
 	type rsFuture struct {
 		rs     *Replicaset
@@ -190,7 +189,7 @@ func (r *Router) BucketResolve(ctx context.Context, bucketID uint64) (*Replicase
 
 // DiscoveryHandleBuckets arrange downloaded buckets to the route map so as they reference a given replicaset.
 func (r *Router) DiscoveryHandleBuckets(ctx context.Context, rs *Replicaset, buckets []uint64) {
-	view := r.getConsistentView()
+	_, view := r.concurrentData.getRefs()
 	removedFrom := make(map[*Replicaset]int)
 
 	for _, bucketID := range buckets {
@@ -230,8 +229,7 @@ func (r *Router) DiscoveryAllBuckets(ctx context.Context) error {
 
 	errGr, ctx := errgroup.WithContext(ctx)
 
-	view := r.getConsistentView()
-	idToReplicasetRef := r.getIDToReplicaset()
+	idToReplicasetRef, view := r.concurrentData.getRefs()
 
 	for _, rs := range idToReplicasetRef {
 		rs := rs

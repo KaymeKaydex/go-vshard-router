@@ -274,7 +274,7 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 
 					var loggedOnce bool
 					for {
-						idToReplicasetRef := r.getIDToReplicaset()
+						idToReplicasetRef, _ := r.concurrentData.getRefs()
 						if _, ok := idToReplicasetRef[destinationUUID]; ok {
 							_, err := r.BucketSet(bucketID, destinationUUID)
 							if err == nil {
@@ -355,9 +355,9 @@ func (r *Router) RouterMapCallRWImpl(
 	}
 
 	timeStart := time.Now()
-	refID := r.refID.Add(1)
+	refID := r.concurrentData.nextRefID()
 
-	idToReplicasetRef := r.getIDToReplicaset()
+	idToReplicasetRef, _ := r.concurrentData.getRefs()
 
 	defer func() {
 		// call function "storage_unref" if map_callrw is failed or successed
@@ -509,11 +509,11 @@ func (r *Router) RouterRoute(ctx context.Context, bucketID uint64) (*Replicaset,
 }
 
 // RouterRouteAll return map of all replicasets.
-func (r *Router) RouterRouteAll() map[uuid.UUID]*Replicaset {
-	idToReplicasetRef := r.getIDToReplicaset()
+func (r *Router) RouterRouteAll() UUIDToReplicasetMap {
+	idToReplicasetRef, _ := r.concurrentData.getRefs()
 
 	// Do not expose the original map to prevent unauthorized modification.
-	idToReplicasetCopy := make(map[uuid.UUID]*Replicaset)
+	idToReplicasetCopy := make(UUIDToReplicasetMap)
 
 	for k, v := range idToReplicasetRef {
 		idToReplicasetCopy[k] = v

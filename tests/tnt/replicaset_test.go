@@ -226,9 +226,7 @@ func TestReplicasetBucketsCount(t *testing.T) {
 
 	require.NoError(t, err, "NewRouter finished successfully")
 	for _, rs := range router.RouterRouteAll() {
-		count := uint64(0)
-
-		count, err = rs.BucketsCount(ctx)
+		count, err := rs.BucketsCount(ctx)
 		require.NoError(t, err)
 		require.NotEqual(t, count, 0)
 	}

@@ -2,7 +2,6 @@ package vshard_router //nolint:revive
 
 import (
 	"context"
-	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,9 +15,7 @@ func TestRouter_BucketResolve_InvalidBucketID(t *testing.T) {
 			TotalBucketCount: uint64(10),
 			Loggerf:          emptyLogfProvider,
 		},
-		view: &consistentView{
-			routeMap: make([]atomic.Pointer[Replicaset], 11),
-		},
+		concurrentData: newRouterConcurrentData(10),
 	}
 
 	_, err := r.BucketResolve(ctx, 20)

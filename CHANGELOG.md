@@ -2,6 +2,7 @@
 
 BUG FIXES:
 * Fix decoding fields for StorageCallVShardError (MasterUUID, ReplicasetUUID).
+* ClusterBootstrap: eliminate direct access to r.idToReplicaset.
 
 CHANGES:
 * Add comment why and how we handle "NON_MASTER" vshard error.
@@ -12,6 +13,7 @@ CHANGES:
 * Decode 'vshard.storage.call' response manually into struct vshardStorageCallResponseProto using DecodeMsgpack interface to reduce allocations (partially #61, #100).
 * Remove `mapstructure` tag from StorageCallVShardError.
 * Update benchmarks in README files.
+* Replace github links to master branch with permalinks.
 
 FEATURES:
 
@@ -26,6 +28,7 @@ REFACTOR:
 * Remove bucketStatError type, use StorageCallVShardError type instead.
 * Add custom msgpackv5 decoder for 'vshard.storage.bucket_stat' response (partially #100).
 * Add custom msgpackv5 decoder for 'BucketStatInfo', since msgpackv5 library has an issue (see commit content).
+* Hide router's concurrent data under interface 'routerConcurrentData' to prevent misusage by developers.
 
 TESTS:
 * Rename bootstrap_test.go -> tarantool_test.go and new test in this file.
