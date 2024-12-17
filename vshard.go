@@ -3,7 +3,6 @@ package vshard_router //nolint:revive
 import (
 	"context"
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -42,23 +41,10 @@ type consistentView struct {
 type Router struct {
 	cfg Config
 
-	// idToReplicasetMutex guards not the map itself, but the variable idToReplicaset.
-	// idToReplicaset is an immutable object by our convention.
-	// Whenever we add or remove a replicaset, we create a new map object.
-	// idToReplicaset can be modified only by TopologyController methods.
-	// Assuming that we rarely add or remove some replicaset,
-	// it should be the simplest and most efficient way of handling concurrent access.
-	// Additionally, we can safely iterate over a map because it never changes.
-	idToReplicasetMutex sync.RWMutex
-	idToReplicaset      map[uuid.UUID]*Replicaset
-
-	viewMutex sync.RWMutex
-	view      *consistentView
-
-	// ----------------------- Map-Reduce -----------------------
-	// Storage Ref ID. It must be unique for each ref request
-	// and therefore is global and monotonically growing.
-	refID atomic.Int64
+	// concurrentData is a router's data that can be accessed concurrently.
+	// It is hidden under interface to prevent misusage by developers.
+	// It's interface enforces developers use it correctly (I hope so).
+	concurrentData routerConcurrentData
 
 	cancelDiscovery func()
 }
@@ -69,20 +55,6 @@ func (r *Router) metrics() MetricsProvider {
 
 func (r *Router) log() LogfProvider {
 	return r.cfg.Loggerf
-}
-
-func (r *Router) getConsistentView() *consistentView {
-	r.viewMutex.RLock()
-	view := r.view
-	r.viewMutex.RUnlock()
-
-	return view
-}
-
-func (r *Router) setConsistentView(view *consistentView) {
-	r.viewMutex.Lock()
-	r.view = view
-	r.viewMutex.Unlock()
 }
 
 type Config struct {
@@ -205,11 +177,9 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 	}
 
 	router := &Router{
-		cfg:            cfg,
-		idToReplicaset: make(map[uuid.UUID]*Replicaset),
-		view: &consistentView{
-			routeMap: make([]atomic.Pointer[Replicaset], cfg.TotalBucketCount+1),
-		},
+		cfg: cfg,
+
+		concurrentData: newRouterConcurrentData(cfg.TotalBucketCount),
 	}
 
 	err = cfg.TopologyProvider.Init(router.Topology())
@@ -240,14 +210,12 @@ func NewRouter(ctx context.Context, cfg Config) (*Router, error) {
 
 // BucketSet Set a bucket to a replicaset.
 func (r *Router) BucketSet(bucketID uint64, rsID uuid.UUID) (*Replicaset, error) {
-	idToReplicasetRef := r.getIDToReplicaset()
+	idToReplicasetRef, view := r.concurrentData.getRefs()
 
 	rs := idToReplicasetRef[rsID]
 	if rs == nil {
 		return nil, newVShardErrorNoRouteToBucket(bucketID)
 	}
-
-	view := r.getConsistentView()
 
 	if oldRs := view.routeMap[bucketID].Swap(rs); oldRs == nil {
 		view.knownBucketCount.Add(1)
@@ -257,7 +225,7 @@ func (r *Router) BucketSet(bucketID uint64, rsID uuid.UUID) (*Replicaset, error)
 }
 
 func (r *Router) BucketReset(bucketID uint64) {
-	view := r.getConsistentView()
+	_, view := r.concurrentData.getRefs()
 
 	if bucketID > r.cfg.TotalBucketCount {
 		return
@@ -273,7 +241,7 @@ func (r *Router) RouteMapClean() {
 		routeMap: make([]atomic.Pointer[Replicaset], r.cfg.TotalBucketCount+1),
 	}
 
-	r.setConsistentView(newView)
+	r.concurrentData.setConsistentView(newView)
 }
 
 func prepareCfg(ctx context.Context, cfg Config) (Config, error) {
@@ -384,10 +352,12 @@ func (r *Router) RouterBucketCount() uint64 {
 // error will result in an immediate return, ensuring that the operation either
 // succeeds fully or fails fast.
 func (r *Router) ClusterBootstrap(ctx context.Context, ifNotBootstrapped bool) error {
-	rssToBootstrap := make([]Replicaset, 0, len(r.idToReplicaset))
+	idToReplicaset, _ := r.concurrentData.getRefs()
+
+	rssToBootstrap := make([]Replicaset, 0, len(idToReplicaset))
 	var lastErr error
 
-	for _, rs := range r.idToReplicaset {
+	for _, rs := range idToReplicaset {
 		rssToBootstrap = append(rssToBootstrap, *rs)
 	}
 

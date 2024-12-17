@@ -120,7 +120,7 @@ func bucketStatWait(future *tarantool.Future) (BucketStatInfo, error) {
 }
 
 // ReplicaCall perform function on remote storage
-// link https://github.com/tarantool/vshard/blob/master/vshard/replicaset.lua#L661
+// link https://github.com/tarantool/vshard/blob/99ceaee014ea3a67424c2026545838e08d69b90c/vshard/replicaset.lua#L661
 // This method is deprecated, because looks like it has a little bit broken interface
 func (rs *Replicaset) ReplicaCall(
 	ctx context.Context,
@@ -216,7 +216,7 @@ func (rs *Replicaset) bucketsDiscovery(ctx context.Context, from uint64) (bucket
 // At each iteration, the algorithm either concludes or disregards at least
 // one new overloaded replicaset. Therefore, its time complexity is O(N^2),
 // where N is the number of replicasets.
-// based on  https://github.com/tarantool/vshard/blob/master/vshard/replicaset.lua#L1358
+// based on https://github.com/tarantool/vshard/blob/99ceaee014ea3a67424c2026545838e08d69b90c/vshard/replicaset.lua#L1358
 func CalculateEtalonBalance(replicasets []Replicaset, bucketCount uint64) error {
 	isBalanceFound := false
 	weightSum := 0.0

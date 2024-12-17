@@ -44,9 +44,6 @@ test: prepare-tnt
 cover: test ## Generate and open the HTML report for test coverage.
 	 $(GO_CMD) tool cover -html=coverage.out
 
-test/integration:
-	@$(MAKE) -C ./tests/integration test
-
 generate/mocks:
 	mockery --name=Pool --case=underscore --output=mocks/pool --outpkg=mockpool # need fix it later
 	mockery --name=TopologyController --case=underscore --output=mocks/topology --outpkg=mocktopology

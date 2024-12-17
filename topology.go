@@ -26,20 +26,6 @@ type TopologyController interface {
 	AddReplicasets(ctx context.Context, replicasets map[ReplicasetInfo][]InstanceInfo) error
 }
 
-func (r *Router) getIDToReplicaset() map[uuid.UUID]*Replicaset {
-	r.idToReplicasetMutex.RLock()
-	idToReplicasetRef := r.idToReplicaset
-	r.idToReplicasetMutex.RUnlock()
-
-	return idToReplicasetRef
-}
-
-func (r *Router) setIDToReplicaset(idToReplicasetNew map[uuid.UUID]*Replicaset) {
-	r.idToReplicasetMutex.Lock()
-	r.idToReplicaset = idToReplicasetNew
-	r.idToReplicasetMutex.Unlock()
-}
-
 func (r *Router) Topology() TopologyController {
 	return r
 }
@@ -62,7 +48,7 @@ func (r *Router) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceI
 		Opts: r.cfg.PoolOpts,
 	}
 
-	idToReplicasetRef := r.getIDToReplicaset()
+	idToReplicasetRef, _ := r.concurrentData.getRefs()
 
 	rs := idToReplicasetRef[rsID]
 	if rs == nil {
@@ -75,7 +61,7 @@ func (r *Router) AddInstance(ctx context.Context, rsID uuid.UUID, info InstanceI
 func (r *Router) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID) error {
 	r.log().Debugf(ctx, "Trying to remove instance %s from router topology in rs %s", instanceID, rsID)
 
-	idToReplicasetRef := r.getIDToReplicaset()
+	idToReplicasetRef, _ := r.concurrentData.getRefs()
 
 	rs := idToReplicasetRef[rsID]
 	if rs == nil {
@@ -88,7 +74,7 @@ func (r *Router) RemoveInstance(ctx context.Context, rsID, instanceID uuid.UUID)
 func (r *Router) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, instances []InstanceInfo) error {
 	r.log().Debugf(ctx, "Trying to add replicaset %s to router topology", rsInfo)
 
-	idToReplicasetOld := r.getIDToReplicaset()
+	idToReplicasetOld, _ := r.concurrentData.getRefs()
 
 	if _, ok := idToReplicasetOld[rsInfo.UUID]; ok {
 		return ErrReplicasetExists
@@ -138,7 +124,7 @@ func (r *Router) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, insta
 	replicaset.conn = conn
 
 	// Create an entirely new map object
-	idToReplicasetNew := make(map[uuid.UUID]*Replicaset)
+	idToReplicasetNew := make(UUIDToReplicasetMap)
 	for k, v := range idToReplicasetOld {
 		idToReplicasetNew[k] = v
 	}
@@ -148,7 +134,7 @@ func (r *Router) AddReplicaset(ctx context.Context, rsInfo ReplicasetInfo, insta
 	// by comparing references to r.idToReplicaset and idToReplicasetOld.
 	// But it requires reflection which I prefer to avoid.
 	// See: https://stackoverflow.com/questions/58636694/how-to-know-if-2-go-maps-reference-the-same-data.
-	r.setIDToReplicaset(idToReplicasetNew)
+	r.concurrentData.setIDToReplicaset(idToReplicasetNew)
 
 	return nil
 }
@@ -171,7 +157,7 @@ func (r *Router) AddReplicasets(ctx context.Context, replicasets map[ReplicasetI
 func (r *Router) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
 	r.log().Debugf(ctx, "Trying to remove replicaset %s from router topology", rsID)
 
-	idToReplicasetOld := r.getIDToReplicaset()
+	idToReplicasetOld, _ := r.concurrentData.getRefs()
 
 	rs := idToReplicasetOld[rsID]
 	if rs == nil {
@@ -179,13 +165,13 @@ func (r *Router) RemoveReplicaset(ctx context.Context, rsID uuid.UUID) []error {
 	}
 
 	// Create an entirely new map object
-	idToReplicasetNew := make(map[uuid.UUID]*Replicaset)
+	idToReplicasetNew := make(UUIDToReplicasetMap)
 	for k, v := range idToReplicasetOld {
 		idToReplicasetNew[k] = v
 	}
 	delete(idToReplicasetNew, rsID)
 
-	r.setIDToReplicaset(idToReplicasetNew)
+	r.concurrentData.setIDToReplicaset(idToReplicasetNew)
 
 	return rs.conn.CloseGraceful()
 }
