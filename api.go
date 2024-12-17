@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
 
 	"github.com/tarantool/go-tarantool/v2"
 	"github.com/tarantool/go-tarantool/v2/pool"
@@ -338,15 +337,154 @@ func (r *Router) RouterCallImpl(ctx context.Context,
 	}
 }
 
+// RouterMapCallRWOptions sets options for RouterMapCallRW.
+type RouterMapCallRWOptions struct {
+	// Timeout defines timeout for RouterMapCallRW.
+	Timeout time.Duration
+}
+
+type storageMapResponseProto[T any] struct {
+	ok    bool
+	value T
+	err   StorageCallVShardError
+}
+
+func (r *storageMapResponseProto[T]) DecodeMsgpack(d *msgpack.Decoder) error {
+	// proto for 'storage_map' method
+	// https://github.com/tarantool/vshard/blob/8d299bfecff8bc656056658350ad48c829f9ad3f/vshard/storage/init.lua#L3158
+	respArrayLen, err := d.DecodeArrayLen()
+	if err != nil {
+		return err
+	}
+
+	if respArrayLen == 0 {
+		return fmt.Errorf("protocol violation: invalid array length: %d", respArrayLen)
+	}
+
+	code, err := d.PeekCode()
+	if err != nil {
+		return err
+	}
+
+	if code == msgpcode.Nil {
+		err = d.DecodeNil()
+		if err != nil {
+			return err
+		}
+
+		if respArrayLen != 2 {
+			return fmt.Errorf("protocol violation: length is %d on vshard error case", respArrayLen)
+		}
+
+		err = d.Decode(&r.err)
+		if err != nil {
+			return fmt.Errorf("failed to decode storage vshard error: %w", err)
+		}
+
+		return nil
+	}
+
+	isOk, err := d.DecodeBool()
+	if err != nil {
+		return err
+	}
+
+	if !isOk {
+		return fmt.Errorf("protocol violation: isOk=false")
+	}
+
+	switch respArrayLen {
+	case 1:
+		break
+	case 2:
+		err = d.Decode(&r.value)
+		if err != nil {
+			return fmt.Errorf("can't decode value %T: %w", r.value, err)
+		}
+	default:
+		return fmt.Errorf("protocol violation: invalid array length when no vshard error: %d", respArrayLen)
+	}
+
+	r.ok = true
+
+	return nil
+}
+
+type storageRefResponseProto struct {
+	err         error
+	bucketCount uint64
+}
+
+func (r *storageRefResponseProto) DecodeMsgpack(d *msgpack.Decoder) error {
+	respArrayLen, err := d.DecodeArrayLen()
+	if err != nil {
+		return err
+	}
+
+	if respArrayLen == 0 {
+		return fmt.Errorf("protocol violation: invalid array length: %d", respArrayLen)
+	}
+
+	code, err := d.PeekCode()
+	if err != nil {
+		return err
+	}
+
+	if code == msgpcode.Nil {
+		err = d.DecodeNil()
+		if err != nil {
+			return err
+		}
+
+		if respArrayLen != 2 {
+			return fmt.Errorf("protocol violation: length is %d on error case", respArrayLen)
+		}
+
+		// The possible variations of error here are fully unknown yet for us, e.g:
+		// vshard error, assert error or some other type of error. So this question requires research.
+		// So we do not decode it to some known error format, because we don't use it anyway.
+		decodedError, err := d.DecodeInterface()
+		if err != nil {
+			return err
+		}
+
+		// convert empty interface into error
+		r.err = fmt.Errorf("%v", decodedError)
+
+		return nil
+	}
+
+	r.bucketCount, err = d.DecodeUint64()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // RouterMapCallRWImpl perform call function on all masters in the cluster
 // with a guarantee that in case of success it was executed with all
 // buckets being accessible for reads and writes.
+// Deprecated: RouterMapCallRWImpl is deprecated.
+// Use more general RouterMapCallRW instead.
 func (r *Router) RouterMapCallRWImpl(
 	ctx context.Context,
 	fnc string,
 	args interface{},
 	opts CallOpts,
 ) (map[uuid.UUID]interface{}, error) {
+	return RouterMapCallRW[interface{}](r, ctx, fnc, args, RouterMapCallRWOptions{Timeout: opts.Timeout})
+}
+
+// RouterMapCallRW is a consistent Map-Reduce. The given function is called on all masters in the
+// cluster with a guarantee that in case of success it was executed with all
+// buckets being accessible for reads and writes.
+// T is a return type of user defined function 'fnc'.
+// We define it as a distinct function, not a Router method, because golang limitations,
+// see: https://github.com/golang/go/issues/49085.
+func RouterMapCallRW[T any](r *Router, ctx context.Context,
+	fnc string, args interface{}, opts RouterMapCallRWOptions,
+) (map[uuid.UUID]T, error) {
 	const vshardStorageServiceCall = "vshard.storage._call"
 
 	timeout := CallTimeoutMin
@@ -399,32 +537,17 @@ func (r *Router) RouterMapCallRWImpl(
 	// proto for 'storage_ref' method:
 	// https://github.com/tarantool/vshard/blob/dfa2cc8a2aff221d5f421298851a9a229b2e0434/vshard/storage/init.lua#L3137
 	for _, rsFuture := range rsFutures {
-		respData, err := rsFuture.future.Get()
-		if err != nil {
+		var storageRefResponse storageRefResponseProto
+
+		if err := rsFuture.future.GetTyped(&storageRefResponse); err != nil {
 			return nil, fmt.Errorf("rs {%s} storage_ref err: %v", rsFuture.uuid, err)
 		}
 
-		if len(respData) < 1 {
-			return nil, fmt.Errorf("protocol violation: storage_ref: expected len(respData) 1 or 2, got: %d", len(respData))
+		if storageRefResponse.err != nil {
+			return nil, fmt.Errorf("storage_ref failed on %v: %v", rsFuture.uuid, storageRefResponse.err)
 		}
 
-		if respData[0] == nil {
-			if len(respData) != 2 {
-				return nil, fmt.Errorf("protocol vioaltion: storage_ref: expected len(respData) = 2 when respData[0] == nil, got %d", len((respData)))
-			}
-
-			// The possible variations of error in respData[1] are fully unknown yet for us, this question requires research.
-			// So we do not convert respData[1] to some known error format, because we don't use it anyway.
-			return nil, fmt.Errorf("storage_ref failed on %v: %v", rsFuture.uuid, respData[1])
-		}
-
-		var bucketCount uint64
-		err = rsFuture.future.GetTyped(&[]interface{}{&bucketCount})
-		if err != nil {
-			return nil, err
-		}
-
-		totalBucketCount += bucketCount
+		totalBucketCount += storageRefResponse.bucketCount
 	}
 
 	if totalBucketCount != r.cfg.TotalBucketCount {
@@ -449,52 +572,20 @@ func (r *Router) RouterMapCallRWImpl(
 	}
 
 	// map stage: get their responses
-	idToResult := make(map[uuid.UUID]interface{})
-	// proto for 'storage_map' method:
-	// https://github.com/tarantool/vshard/blob/8d299bfecff8bc656056658350ad48c829f9ad3f/vshard/storage/init.lua#L3158
+	idToResult := make(map[uuid.UUID]T)
 	for _, rsFuture := range rsFutures {
-		respData, err := rsFuture.future.Get()
+		var storageMapResponse storageMapResponseProto[T]
+
+		err := rsFuture.future.GetTyped(&storageMapResponse)
 		if err != nil {
 			return nil, fmt.Errorf("rs {%s} storage_map err: %v", rsFuture.uuid, err)
 		}
 
-		if len(respData) < 1 {
-			return nil, fmt.Errorf("protocol violation: invalid respData length: must be >= 1, current: %d", len(respData))
+		if !storageMapResponse.ok {
+			return nil, fmt.Errorf("storage_map failed on %v: %+v", rsFuture.uuid, storageMapResponse.err)
 		}
 
-		if respData[0] == nil {
-			if len(respData) != 2 {
-				return nil, fmt.Errorf("protocol violation: invalid respData length when respData[0] == nil, must be = 2, current: %d", len(respData))
-			}
-
-			var assertError assertError
-			err = mapstructure.Decode(respData[1], &assertError)
-			if err != nil {
-				// We could not decode respData[1] as assertError, so return respData[1] as is, add info why we could not decode.
-				return nil, fmt.Errorf("storage_map failed on %v: %+v (decoding to assertError failed %v)", rsFuture.uuid, respData[1], err)
-			}
-
-			return nil, fmt.Errorf("storage_map failed on %v: %+v", rsFuture.uuid, assertError)
-		}
-
-		var isVShardRespOk bool
-		err = rsFuture.future.GetTyped(&[]interface{}{&isVShardRespOk})
-		if err != nil {
-			return nil, fmt.Errorf("can't decode isVShardRespOk for storage_map response: %v", err)
-		}
-
-		if !isVShardRespOk {
-			return nil, fmt.Errorf("protocol violation: isVShardRespOk = false from storage_map: replicaset %v", rsFuture.uuid)
-		}
-
-		switch l := len(respData); l {
-		case 1:
-			idToResult[rsFuture.uuid] = nil
-		case 2:
-			idToResult[rsFuture.uuid] = respData[1]
-		default:
-			return nil, fmt.Errorf("protocol vioaltion: invalid respData when respData[0] == true, expected 1 or 2, got %d", l)
-		}
+		idToResult[rsFuture.uuid] = storageMapResponse.value
 	}
 
 	r.metrics().RequestDuration(time.Since(timeStart), true, true)
