@@ -88,8 +88,8 @@ func (r *Router) bucketSearchLegacy(ctx context.Context, bucketID uint64) (*Repl
 
 	for _, rsFuture := range rsFutures {
 		if _, err := bucketStatWait(rsFuture.future); err != nil {
-			var bsError bucketStatError
-			if !errors.As(err, &bsError) {
+			var vshardError StorageCallVShardError
+			if !errors.As(err, &vshardError) {
 				r.log().Errorf(ctx, "bucketSearchLegacy: bucketStatWait call error for %v: %v", rsFuture.rsID, err)
 			}
 			// just skip, bucket may not belong to this replicaset

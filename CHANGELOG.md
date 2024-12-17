@@ -23,6 +23,9 @@ REFACTOR:
 * Use constants for vshard error names and codes.
 * Reduce SLOC by using CallAsync method.
 * BucketForceCreate optimization: don't decode tnt response.
+* Remove bucketStatError type, use StorageCallVShardError type instead.
+* Add custom msgpackv5 decoder for 'vshard.storage.bucket_stat' response (partially #100).
+* Add custom msgpackv5 decoder for 'BucketStatInfo', since msgpackv5 library has an issue (see commit content).
 
 TESTS:
 * Rename bootstrap_test.go -> tarantool_test.go and new test in this file.

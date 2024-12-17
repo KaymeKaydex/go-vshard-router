@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/snksoft/crc"
+	"github.com/vmihailenco/msgpack/v5"
 
 	tarantool "github.com/tarantool/go-tarantool/v2"
 )
@@ -122,8 +123,48 @@ type Config struct {
 }
 
 type BucketStatInfo struct {
-	BucketID uint64 `mapstructure:"id"`
-	Status   string `mapstructure:"status"`
+	BucketID uint64 `msgpack:"id"`
+	Status   string `msgpack:"status"`
+}
+
+// tnt vshard storage returns map with 'int' keys for bucketStatInfo,
+// example: map[id:48 status:active 1:48 2:active].
+// But msgpackv5 supports only string keys when decoding maps into structs,
+// see issue: https://github.com/vmihailenco/msgpack/issues/372
+// To workaround this we decode BucketStatInfo manually.
+// When the issue above will be resolved, this code can be (and should be) deleted.
+func (bsi *BucketStatInfo) DecodeMsgpack(d *msgpack.Decoder) error {
+	nKeys, err := d.DecodeMapLen()
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < nKeys; i++ {
+		key, err := d.DecodeInterface()
+		if err != nil {
+			return err
+		}
+
+		keyName, _ := key.(string)
+		switch keyName {
+		case "id":
+			if err := d.Decode(&bsi.BucketID); err != nil {
+				return err
+			}
+		case "status":
+			if err := d.Decode(&bsi.Status); err != nil {
+				return err
+			}
+		default:
+			// skip unused value
+			if err := d.Skip(); err != nil {
+				return err
+			}
+		}
+
+	}
+
+	return nil
 }
 
 type InstanceInfo struct {
