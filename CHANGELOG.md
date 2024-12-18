@@ -12,11 +12,13 @@ CHANGES:
 * Decode 'vshard.storage.call' response manually into struct vshardStorageCallResponseProto using DecodeMsgpack interface to reduce allocations (partially #61, #100).
 * Remove `mapstructure` tag from StorageCallVShardError.
 * Update benchmarks in README files.
+* Package `mapstructure` is completely removed from direct dependencies list.
 
 FEATURES:
 
 * Add pause between requests in buckets discovering. Configured by config DiscoveryWorkStep, default is 10ms.
 * Add ReplicaUUID to the StorageCallVShardError struct.
+* New method 'RouterMapCallRW[T]' to replace the deprecated one 'RouterMapCallRWImpl'.
 
 REFACTOR:
 
@@ -26,9 +28,11 @@ REFACTOR:
 * Remove bucketStatError type, use StorageCallVShardError type instead.
 * Add custom msgpackv5 decoder for 'vshard.storage.bucket_stat' response (partially #100).
 * Add custom msgpackv5 decoder for 'BucketStatInfo', since msgpackv5 library has an issue (see commit content).
+* Add custom msgpackv5 decoder for 'RouterMapCallRW'.
 
 TESTS:
 * Rename bootstrap_test.go -> tarantool_test.go and new test in this file.
+* Test for new 'RouterMapCallRW[T]'.
 
 ## v1.2.0
 

@@ -43,6 +43,13 @@ func TestRouterMapCall(t *testing.T) {
 		require.Equalf(t, arg, v, "RouterMapCallRWImpl value ok for %v", k)
 	}
 
+	echoArgs = []interface{}{1}
+	respInt, err := vshardrouter.RouterMapCallRW[int](router, ctx, "echo", echoArgs, vshardrouter.RouterMapCallRWOptions{})
+	require.NoError(t, err, "RouterMapCallRW[int] echo finished with no err")
+	for k, v := range respInt {
+		require.Equalf(t, 1, v, "RouterMapCallRW[int] value ok for %v", k)
+	}
+
 	// RouterMapCallRWImpl returns only one value
 	echoArgs = []interface{}{arg, "arg2"}
 	resp, err = router.RouterMapCallRWImpl(ctx, "echo", echoArgs, callOpts)
