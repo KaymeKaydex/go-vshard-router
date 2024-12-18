@@ -67,7 +67,7 @@ func TestRouter_RouterCallImpl(t *testing.T) {
 			conn: mPool,
 		})
 
-		_, _, err := r.RouterCallImpl(ctx, 5, CallOpts{Timeout: time.Second}, "test", []byte("test"))
+		_, _, err := r.RouterCallImpl(ctx, 5, CallOpts{Timeout: time.Second, VshardMode: ReadMode}, "test", []byte("test"))
 		require.ErrorIs(t, err, futureError)
 	})
 }

@@ -32,8 +32,8 @@ func TestRouterCallProto(t *testing.T) {
 	require.Nil(t, err, "NewRouter finished successfully")
 
 	bucketID := randBucketID(totalBucketCount)
-	arg1 := "arg1"
-	args := []interface{}{arg1}
+	arg1, arg2 := "arg1", "arg2"
+	args := []interface{}{arg1, arg2}
 	callOpts := vshardrouter.CallOpts{
 		VshardMode: vshardrouter.ReadMode,
 		PoolMode:   pool.PreferRO,
@@ -42,10 +42,11 @@ func TestRouterCallProto(t *testing.T) {
 	resp, getTyped, err := router.RouterCallImpl(ctx, bucketID, callOpts, "echo", args)
 	require.Nil(t, err, "RouterCallImpl echo finished with no err")
 	require.EqualValues(t, args, resp, "RouterCallImpl echo resp correct")
-	var arg1Got string
-	err = getTyped(&arg1Got)
+	var arg1Got, arg2Got string
+	err = getTyped(&arg1Got, &arg2Got)
 	require.Nil(t, err, "RouterCallImpl getTyped call ok")
-	require.Equal(t, arg1, arg1Got, "RouterCallImpl getTyped res ok")
+	require.Equal(t, arg1, arg1Got, "RouterCallImpl getTyped arg1 res ok")
+	require.Equal(t, arg2, arg2Got, "RouterCallImpl getTyped arg2 res ok")
 
 	_, _, err = router.RouterCallImpl(ctx, totalBucketCount+1, callOpts, "echo", args)
 	require.Error(t, err, "RouterCallImpl echo finished with err when bucketID is out of range")

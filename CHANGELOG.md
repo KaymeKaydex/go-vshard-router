@@ -19,6 +19,7 @@ FEATURES:
 * Add pause between requests in buckets discovering. Configured by config DiscoveryWorkStep, default is 10ms.
 * Add ReplicaUUID to the StorageCallVShardError struct.
 * New method 'RouterMapCallRW[T]' to replace the deprecated one 'RouterMapCallRWImpl'.
+* New method 'Router.Call' to replace the deprecated one 'RouterCallImpl'.
 
 REFACTOR:
 
@@ -29,6 +30,7 @@ REFACTOR:
 * Add custom msgpackv5 decoder for 'vshard.storage.bucket_stat' response (partially #100).
 * Add custom msgpackv5 decoder for 'BucketStatInfo', since msgpackv5 library has an issue (see commit content).
 * Add custom msgpackv5 decoder for 'RouterMapCallRW'.
+* New backward-compatible signature for StorageResultTypedFunc to fix interface for RouterCallImpl.
 
 TESTS:
 * Rename bootstrap_test.go -> tarantool_test.go and new test in this file.
