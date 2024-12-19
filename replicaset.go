@@ -120,8 +120,11 @@ func bucketStatWait(future *tarantool.Future) (BucketStatInfo, error) {
 }
 
 // ReplicaCall perform function on remote storage
-// link https://github.com/tarantool/vshard/blob/master/vshard/replicaset.lua#L661
-// This method is deprecated, because looks like it has a little bit broken interface
+// link https://github.com/tarantool/vshard/blob/99ceaee014ea3a67424c2026545838e08d69b90c/vshard/replicaset.lua#L661
+// Deprecated: ReplicaCall is deprecated,
+// because looks like it has a little bit broken interface.
+// See https://github.com/KaymeKaydex/go-vshard-router/issues/42.
+// Use CallAsync instead.
 func (rs *Replicaset) ReplicaCall(
 	ctx context.Context,
 	opts ReplicasetCallOpts,
@@ -129,7 +132,7 @@ func (rs *Replicaset) ReplicaCall(
 	args interface{},
 ) (interface{}, StorageResultTypedFunc, error) {
 	if opts.Timeout == 0 {
-		opts.Timeout = CallTimeoutMin
+		opts.Timeout = callTimeoutDefault
 	}
 
 	future := rs.CallAsync(ctx, opts, fnc, args)
@@ -144,8 +147,8 @@ func (rs *Replicaset) ReplicaCall(
 		return nil, nil, fmt.Errorf("%s response data is empty", fnc)
 	}
 
-	return respData[0], func(result interface{}) error {
-		return future.GetTyped(&[]interface{}{&result})
+	return respData[0], func(result ...interface{}) error {
+		return future.GetTyped(&result)
 	}, nil
 }
 
