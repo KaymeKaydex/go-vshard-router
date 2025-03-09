@@ -1,5 +1,7 @@
 # Go VShard Router
 
+> :warning: This project is depreacted and archived as the functionality moved to [tarantool/go-vshard-router](https://github.com/tarantool/go-vshard-router) repo. You can pull it using `go get github.com/tarantool/go-vshard-router/v2`. The API is simplified and morernized, yet functionality is similar. All questions and issues you can submit [here](https://github.com/tarantool/go-vshard-router/issues).
+
 <img align="right" width="159px" src="docs/static/logo.png" alt="go vshard router logo">
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/KaymeKaydex/go-vshard-router.svg)](https://pkg.go.dev/github.com/KaymeKaydex/go-vshard-router)
